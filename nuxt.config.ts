@@ -1,6 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
 export default defineNuxtConfig({
+    compatibilityDate: '2025-06-10', // Nuxt compatibility warning fix
     runtimeConfig: {
         public: {
             API_BASE_URL: process.env.API_URL,
@@ -9,8 +10,8 @@ export default defineNuxtConfig({
     },
     app: {
         head: {
-            charset: 'utf-16',
-            viewport: 'width=500, initial-scale=1',
+            charset: 'utf-8', // Fixed from utf-16
+            viewport: 'width=device-width, initial-scale=1', // Fixed from width=500
             title: 'Nuxt 3 Starter Template',
             // titleTemplate: '%s %separator %siteName',
             meta: [
@@ -27,6 +28,23 @@ export default defineNuxtConfig({
 
     css: ['~/assets/scss/style.scss', '~/assets/css/dashboard.css'],
 
+    // Modern Sass API kullanarak deprecation warning'leri sustur
+    vite: {
+        css: {
+            preprocessorOptions: {
+                scss: {
+                    api: 'modern', // Modern Sass API'sini kullan
+                    silenceDeprecations: [
+                        'import', 
+                        'global-builtin', 
+                        'color-functions'
+                    ], // Bootstrap'ten gelen uyarıları sustur
+                    quietDeps: true // Dependencies'ten gelen uyarıları sustur
+                }
+            }
+        }
+    },
+
     plugins: [
         {
             src: 'plugins/bootstrap.js',
@@ -39,7 +57,6 @@ export default defineNuxtConfig({
         '@pinia/nuxt',
         '@nuxt/image',
         '@nuxtjs/robots',
-        '@pinia/nuxt',
         'pinia-plugin-persistedstate/nuxt',
     ],
     i18n: {

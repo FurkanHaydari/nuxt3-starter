@@ -1,12 +1,42 @@
-node_modules
-*.log*
+# Nuxt dev/build outputs
+.output
+.data
 .nuxt
 .nitro
 .cache
-.output
-.env
 dist
-.idea/
-/.vscode
-yarn.lock
-package-lock.json
+
+# Node dependencies
+node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Local env files
+.env
+.env.local
+.env.*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+Thumbs.db
+
+# SCSS cache
+.sass-cache/
+*.css.map

@@ -26,10 +26,8 @@ updateMeta({
                     <span class="badge bg-secondary">yarn</span>
                 </div>
                 <div class="card-body">
-                    <p>
-                        <pre># install dependencies <br><span class="dollar">$</span><span class="cmnd"> yarn install</span></pre>
-                        <pre># serve <br/><span class="dollar">$</span><span class="cmnd"> yarn dev</span></pre>
-                    </p>
+                    <pre># install dependencies <br><span class="dollar">$</span><span class="cmnd"> yarn install</span></pre>
+                    <pre># serve <br/><span class="dollar">$</span><span class="cmnd"> yarn dev</span></pre>
                 </div>
             </div>
             <h4 class="my-3">Build as Static Site</h4>
@@ -38,11 +36,9 @@ updateMeta({
                     <span class="badge bg-secondary">yarn</span>
                 </div>
                 <div class="card-body">
-                    <p>
-                        <pre># generate static files <br><span class="dollar">$</span><span class="cmnd"> yarn generate</span></pre>
-                        <pre># serve <br/><span class="dollar">$</span><span class="cmnd"> yarn preview</span></pre>
-                        <pre># or serve with "serve" <br/><span class="dollar">$</span><span class="cmnd"> npx serve ./dist/</span></pre>
-                    </p>
+                    <pre># generate static files <br><span class="dollar">$</span><span class="cmnd"> yarn generate</span></pre>
+                    <pre># serve <br/><span class="dollar">$</span><span class="cmnd"> yarn preview</span></pre>
+                    <pre># or serve with "serve" <br/><span class="dollar">$</span><span class="cmnd"> npx serve ./dist/</span></pre>
                 </div>
             </div>
         </div>
