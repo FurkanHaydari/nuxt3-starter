@@ -1,91 +1,94 @@
 <template>
-    <div class="container content-space-3 content-space-t-lg-4 content-space-b-lg-3">
-      <div class="card card-body flex-grow-1 mx-auto border-0 shadow-sm" style="max-width: 28rem;">
-        <!-- Heading -->
-        <div class="text-center mb-5 mb-md-7">
-          <h1 class="h2">Welcome back</h1>
-          <p>Login to manage your account.</p>
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6 col-lg-5">
+        <div class="card shadow">
+          <div class="card-body p-4">
+            <div class="text-center mb-4">
+              <h2 class="h4 fw-bold">Üye Ol</h2>
+              <p class="text-muted">BetStarter'a katılın ve kazanmaya başlayın!</p>
+            </div>
+            
+            <form>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="firstName" class="form-label">Ad</label>
+                    <input type="text" class="form-control" id="firstName" required>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="lastName" class="form-label">Soyad</label>
+                    <input type="text" class="form-control" id="lastName" required>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="email" class="form-label">E-posta Adresi</label>
+                <input type="email" class="form-control" id="email" required>
+              </div>
+              
+              <div class="mb-3">
+                <label for="phone" class="form-label">Telefon Numarası</label>
+                <input type="tel" class="form-control" id="phone" placeholder="+90 (___) ___ ____" required>
+              </div>
+              
+              <div class="mb-3">
+                <label for="password" class="form-label">Şifre</label>
+                <input type="password" class="form-control" id="password" required>
+              </div>
+              
+              <div class="mb-3">
+                <label for="confirmPassword" class="form-label">Şifre Tekrar</label>
+                <input type="password" class="form-control" id="confirmPassword" required>
+              </div>
+              
+              <div class="mb-3">
+                <label for="birthDate" class="form-label">Doğum Tarihi</label>
+                <input type="date" class="form-control" id="birthDate" required>
+              </div>
+              
+              <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="termsCheck" required>
+                <label class="form-check-label" for="termsCheck">
+                  <a href="#" class="text-decoration-none">Kullanım Şartları</a> ve 
+                  <a href="#" class="text-decoration-none">Gizlilik Politikası</a>'nı kabul ediyorum
+                </label>
+              </div>
+              
+              <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="ageCheck" required>
+                <label class="form-check-label" for="ageCheck">
+                  18 yaşından büyük olduğumu beyan ederim
+                </label>
+              </div>
+              
+              <button type="submit" class="btn btn-primary w-100 mb-3">
+                <i class="bi bi-person-plus me-2"></i>
+                Üye Ol
+              </button>
+              
+              <div class="text-center">
+                <span class="text-muted">Zaten hesabınız var mı? </span>
+                <NuxtLink to="/auth/login" class="text-decoration-none">
+                  Giriş yapın
+                </NuxtLink>
+              </div>
+            </form>
+          </div>
         </div>
-        <!-- End Heading -->
-
-        <!-- Form -->
-        <form class="js-validate needs-validation">
-          <!-- Form -->
-          
-          <div class="mb-3">
-            <label class="form-label" for="name">Your Name</label>
-            <input type="text" class="form-control form-control-lg" name="name" id="name" placeholder="Jhon Deo" aria-label="Jhon Deo">
-            <span class="invalid-feedback">Please enter a valid name.</span>
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="signupSimpleSignupEmail">Your email</label>
-            <input type="email" class="form-control form-control-lg" name="email" id="signupSimpleSignupEmail" placeholder="email@site.com" aria-label="email@site.com" required="">
-            <span class="invalid-feedback">Please enter a valid email address.</span>
-          </div>
-          <!-- End Form -->
-
-          <!-- Form -->
-          <div class="mb-3">
-            <label class="form-label" for="signupSimpleSignupPassword">Password</label>
-
-            <div class="input-group input-group-merge">
-              <input type="password" class="js-toggle-password form-control form-control-lg" name="password" id="signupSimpleSignupPassword" placeholder="8+ characters required" aria-label="8+ characters required">
-              <a class="js-toggle-password-target-1 input-group-append input-group-text" href="javascript:;">
-                <i class="js-toggle-passowrd-show-icon-1 bi-eye-slash"></i>
-              </a>
-            </div>
-
-            <span class="invalid-feedback">Your password is invalid. Please try again.</span>
-          </div>
-          <!-- End Form -->
-
-          <!-- Form -->
-          <div class="mb-3">
-            <label class="form-label" for="signupSimpleSignupConfirmPassword">Confirm password</label>
-
-            <div class="input-group input-group-merge">
-              <input type="password" class="js-toggle-password form-control form-control-lg" name="confirmPassword" id="signupSimpleSignupConfirmPassword" placeholder="8+ characters required" aria-label="8+ characters required">
-              <a class="js-toggle-password-target-2 input-group-append input-group-text" href="javascript:;">
-                <i class="js-toggle-passowrd-show-icon-2 bi-eye-slash"></i>
-              </a>
-            </div>
-
-            <span class="invalid-feedback">Password does not match the confirm password.</span>
-          </div>
-          <!-- End Form -->
-
-          <!-- Check -->
-          <div class="form-check mb-3">
-            <input type="checkbox" class="form-check-input" id="signupHeroFormPrivacyCheck" name="signupFormPrivacyCheck">
-            <label class="form-check-label small" for="signupHeroFormPrivacyCheck"> By submitting this form I have read and acknowledged the <a href="./page-privacy.html">Privacy Policy</a></label>
-            <span class="invalid-feedback">Please accept our Privacy Policy.</span>
-          </div>
-          <!-- End Check -->
-
-          <div class="d-grid mb-3">
-            <button type="submit" class="btn btn-primary btn-lg" @click.prevent="authRegister">Register</button>
-          </div>
-
-          <div class="text-center">
-            <p>Already have an account? <NuxtLink to="/auth/login" class="link">Log in here</NuxtLink></p>
-          </div>
-        </form>
-        <!-- End Form -->
       </div>
     </div>
+  </div>
 </template>
 
-<script setup>
-import { useRouter } from 'vue-router';
-const { updateMeta } = useSeo();
-
-const router = useRouter();
-
-const authRegister = () => {
-  router.push('/admin');
-}
-
-updateMeta({
-  title: 'Register',
-});
+<script setup lang="ts">
+useHead({
+  title: 'Üye Ol - BetStarter',
+  meta: [
+    { name: 'description', content: 'BetStarter\'a üye olun ve kazanmaya başlayın!' }
+  ]
+})
 </script>

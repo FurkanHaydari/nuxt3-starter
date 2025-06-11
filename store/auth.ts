@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 interface UserPayloadInterface {
   username: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export const useAuthStore = defineStore('auth', {

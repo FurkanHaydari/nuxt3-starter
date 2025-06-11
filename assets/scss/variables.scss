@@ -1,0 +1,207 @@
+// ===========================================
+// BetStarter Renk Paleti & CSS Variables
+// ===========================================
+
+// Ana Brand Renkleri
+:root {
+  // Primary Colors (Mavi tonları - Güven & Profesyonellik)
+  --bs-primary-darker: #0d1b3a;
+  --bs-primary-dark: #1a2f5a; 
+  --bs-primary: #2d4f7a;
+  --bs-primary-light: #4a6fa5;
+  --bs-primary-lighter: #e8f0ff;
+
+  // Secondary Colors (Koyu tonlar - Sofistike görünüm)
+  --bs-secondary-darker: #1a1a1a;
+  --bs-secondary-dark: #2d2d2d;
+  --bs-secondary: #404040;
+  --bs-secondary-light: #6c757d;
+  --bs-secondary-lighter: #f8f9fa;
+
+  // Accent Colors (Altın - Premium & Lüks)
+  --bs-accent-darker: #b8860b;
+  --bs-accent-dark: #daa520;
+  --bs-accent: #ffd700;
+  --bs-accent-light: #ffed4e;
+  --bs-accent-lighter: #fffcf0;
+
+  // Success Colors (Yeşil - Kazanç & Başarı)
+  --bs-success-darker: #0f4c3a;
+  --bs-success-dark: #1e7e34;
+  --bs-success: #28a745;
+  --bs-success-light: #71dd8a;
+  --bs-success-lighter: #f0fff4;
+
+  // Danger Colors (Kırmızı - Canlı & Acil)
+  --bs-danger-darker: #721c24;
+  --bs-danger-dark: #bd2130;
+  --bs-danger: #dc3545;
+  --bs-danger-light: #f5c6cb;
+  --bs-danger-lighter: #fff5f5;
+
+  // Warning Colors (Turuncu - Uyarı & Dikkat)
+  --bs-warning-darker: #8a4a00;
+  --bs-warning-dark: #d39e00;
+  --bs-warning: #ffc107;
+  --bs-warning-light: #ffeaa7;
+  --bs-warning-lighter: #fffdf0;
+
+  // Info Colors (Açık Mavi - Bilgi & Yardım)
+  --bs-info-darker: #0c5460;
+  --bs-info-dark: #138496;
+  --bs-info: #17a2b8;
+  --bs-info-light: #bee5eb;
+  --bs-info-lighter: #f0fdff;
+
+  // Neutral Colors (Gri tonları)
+  --bs-light-darker: #e9ecef;
+  --bs-light-dark: #f8f9fa;
+  --bs-light: #ffffff;
+  --bs-dark-lighter: #495057;
+  --bs-dark-light: #343a40;
+  --bs-dark: #212529;
+
+  // Gradient Backgrounds
+  --bg-gradient-primary: linear-gradient(135deg, var(--bs-primary-darker) 0%, var(--bs-primary) 100%);
+  --bg-gradient-secondary: linear-gradient(135deg, var(--bs-secondary-darker) 0%, var(--bs-secondary-dark) 100%);
+  --bg-gradient-accent: linear-gradient(135deg, var(--bs-accent-dark) 0%, var(--bs-accent) 100%);
+  --bg-gradient-success: linear-gradient(135deg, var(--bs-success-dark) 0%, var(--bs-success) 100%);
+
+  // Shadow Colors
+  --shadow-primary: rgba(45, 79, 122, 0.15);
+  --shadow-secondary: rgba(33, 37, 41, 0.15);
+  --shadow-accent: rgba(255, 215, 0, 0.25);
+  --shadow-light: rgba(0, 0, 0, 0.1);
+  --shadow-dark: rgba(0, 0, 0, 0.25);
+
+  // Border Colors
+  --border-primary: var(--bs-primary-light);
+  --border-secondary: var(--bs-secondary-light);
+  --border-light: #dee2e6;
+  --border-dark: var(--bs-secondary-dark);
+
+  // Text Colors
+  --text-primary: var(--bs-primary);
+  --text-secondary: var(--bs-secondary-light);
+  --text-accent: var(--bs-accent-dark);
+  --text-muted: #6c757d;
+  --text-white: #ffffff;
+  --text-dark: var(--bs-dark);
+
+  // Background Colors
+  --bg-primary: var(--bs-primary);
+  --bg-secondary: var(--bs-secondary-lighter);
+  --bg-dark: var(--bs-secondary-darker);
+  --bg-light: var(--bs-light);
+  --bg-accent: var(--bs-accent-lighter);
+
+  // Component Specific Colors
+  --navbar-bg: var(--bs-secondary-darker);
+  --navbar-text: var(--text-white);
+  --navbar-brand: var(--bs-accent);
+  
+  --card-bg: var(--bg-light);
+  --card-border: var(--border-light);
+  --card-shadow: var(--shadow-light);
+  
+  --button-primary-bg: var(--bg-gradient-primary);
+  --button-accent-bg: var(--bg-gradient-accent);
+  --button-success-bg: var(--bg-gradient-success);
+  
+  --live-indicator: var(--bs-danger);
+  --live-pulse: rgba(220, 53, 69, 0.7);
+  
+  --sport-slider-bg: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  --sport-item-active: var(--bs-primary);
+  --sport-item-hover: var(--shadow-primary);
+}
+
+// Dark Mode Override (Opsiyonel)
+[data-theme="dark"] {
+  --bg-light: var(--bs-secondary-dark);
+  --bg-secondary: var(--bs-secondary-darker);
+  --text-dark: var(--text-white);
+  --text-muted: var(--bs-secondary-light);
+  --card-bg: var(--bs-secondary-dark);
+  --card-border: var(--bs-secondary);
+  --border-light: var(--bs-secondary);
+}
+
+// Bootstrap Override Variables
+$primary: #2d4f7a;
+$secondary: #404040;
+$success: #28a745;
+$info: #17a2b8;
+$warning: #ffc107;
+$danger: #dc3545;
+$light: #f8f9fa;
+$dark: #212529;
+
+// Custom Brand Variables
+$brand-primary: #2d4f7a;
+$brand-accent: #ffd700;
+$brand-secondary: #404040;
+
+// Spacing & Sizing
+$spacer: 1rem;
+$border-radius: 0.375rem;
+$border-radius-lg: 0.5rem;
+$box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+$box-shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+
+// Typography
+$font-family-sans-serif: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+$font-weight-light: 300;
+$font-weight-normal: 400;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// Animation & Transitions
+$transition-base: all 0.3s ease;
+$transition-fast: all 0.15s ease;
+$transition-slow: all 0.5s ease;
+
+// Component Specific Mixins
+@mixin gradient-bg($color1, $color2) {
+  background: linear-gradient(135deg, $color1 0%, $color2 100%);
+}
+
+@mixin card-hover {
+  transition: $transition-base;
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px var(--shadow-primary);
+  }
+}
+
+@mixin button-gradient($color) {
+  background: var(--button-#{$color}-bg);
+  border: none;
+  color: white;
+  transition: $transition-base;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--shadow-#{$color});
+    filter: brightness(1.1);
+  }
+}
+
+@mixin live-pulse {
+  animation: pulse 2s infinite;
+  
+  @keyframes pulse {
+    0% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 var(--live-pulse);
+    }
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 10px transparent;
+    }
+    100% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+} 
