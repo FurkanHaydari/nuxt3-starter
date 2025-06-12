@@ -1,47 +1,103 @@
 import { defineStore } from 'pinia';
 
-interface UserPayloadInterface {
+interface User {
+  id: string;
+  email: string;
   username: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  profession?: string;
+  isEmailVerified: boolean;
+  isPhoneVerified: boolean;
+  status: string;
+  role: string;
+}
+
+interface LoginCredentials {
+  tckn: string;
   password: string;
-  rememberMe?: boolean;
+}
+
+interface RegisterData {
+  email: string;
+  username: string;
+  phoneNumber: string;
+  tckn: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  profession?: string;
+  birthDate: string;
 }
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
+    user: null as User | null,
     authenticated: false,
     loading: false,
+    error: null as string | null,
   }),
-  actions: {
-    async authenticateUser({ username, password }: UserPayloadInterface) {
-      this.loading = true;
-      try {
-        const data: any = await $fetch('https://dummyjson.com/auth/login', {
-          method: 'post',
-          headers: { 'Content-Type': 'application/json' },
-          body: {
-            username,
-            password,
-          },
-        });
 
-        if (data) {
-          const token = useCookie('token'); // Nuxt 3 cookie handling
-          token.value = data.accessToken; // set token to cookie
-          this.authenticated = true; // set authenticated state to true
-        }
-      } finally {
-        this.loading = false;
+  getters: {
+    isAuthenticated: (state) => state.authenticated,
+    currentUser: (state) => state.user,
+    isLoading: (state) => state.loading,
+    hasError: (state) => !!state.error,
+    errorMessage: (state) => state.error,
+    userRole: (state) => state.user?.role,
+    isEmailVerified: (state) => state.user?.isEmailVerified || false,
+    isPhoneVerified: (state) => state.user?.isPhoneVerified || false,
+  },
+
+  actions: {
+    // Clear error
+    clearError() {
+      this.error = null;
+    },
+
+    // Set loading state
+    setLoading(loading: boolean) {
+      this.loading = loading;
+    },
+
+    // Set error
+    setError(error: string) {
+      this.error = error;
+    },
+
+    // Set user data
+    setUser(user: User | null) {
+      this.user = user;
+    },
+
+    // Set authentication state
+    setAuthenticated(authenticated: boolean) {
+      this.authenticated = authenticated;
+    },
+
+    // Clear auth data
+    clearAuth() {
+      this.user = null;
+      this.authenticated = false;
+      this.error = null;
+    },
+
+    // Hydrate authentication state from cookies
+    hydrate() {
+      const config = useRuntimeConfig();
+      const tokenCookie = useCookie(config.public.tokenCookieName as string);
+      
+      if (tokenCookie.value) {
+        this.authenticated = true;
+      } else {
+        this.authenticated = false;
+        this.user = null;
       }
     },
-    logUserOut() {
-      const token = useCookie('token');
-      this.authenticated = false;
-      token.value = null; // clear the token cookie
-    },
-    hydrate() {
-      const token = useCookie('token');
-      this.authenticated = Boolean(token.value); // set authenticated to true if token exists
-    },
   },
+
+  // Persist state
+  persist: true,
 });
 

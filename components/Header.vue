@@ -73,16 +73,40 @@
             </li>
           </ul>
 
-          <!-- Sağ Taraf - Login Formu (Desktop) -->
+          <!-- Sağ Taraf - Auth Section (Desktop) -->
           <div class="d-none d-lg-flex align-items-center">
-            <form @submit.prevent="handleLogin" class="d-flex align-items-center gap-2">
+            <!-- Logged In User -->
+            <div v-if="authenticated" class="d-flex align-items-center gap-3">
+              <span class="text-light">
+                <i class="bi bi-person-circle me-1"></i>
+                Hoş geldiniz
+                <template v-if="user?.firstName || user?.lastName">
+                  <strong>{{ user?.firstName }} {{ user?.lastName }}</strong>
+                </template>
+                <template v-else-if="user?.username">
+                  <strong>{{ user?.username }}</strong>
+                </template>
+                !
+                <!-- Debug -->
+                <small v-if="$dev" class="d-block">
+                  Debug: {{ JSON.stringify({ firstName: user?.firstName, lastName: user?.lastName, username: user?.username }) }}
+                </small>
+              </span>
+              <button @click="handleLogout" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-box-arrow-right me-1"></i>Çıkış
+              </button>
+            </div>
+            
+            <!-- Login Form -->
+            <form v-else @submit.prevent="handleLogin" class="d-flex align-items-center gap-2">
               <div class="input-group input-group-sm" style="width: 200px;">
                 <input
                   v-model="loginForm.username"
                   type="text"
                   class="form-control border-secondary bg-light"
-                  placeholder="Üye No / TC / Kullanıcı Adı"
-                  aria-label="Kullanıcı Adı"
+                  placeholder="TC Kimlik No"
+                  aria-label="TC Kimlik No"
+                  maxlength="11"
                   required
                 >
               </div>
@@ -98,26 +122,19 @@
                 >
               </div>
 
-              <div class="form-check form-check-inline">
-                <input
-                  v-model="loginForm.rememberMe"
-                  class="form-check-input"
-                  type="checkbox"
-                  id="rememberMe"
-                >
-                <label class="form-check-label small" for="rememberMe">
-                  Beni Hatırla
-                </label>
-              </div>
-
-              <button type="submit" class="btn btn-accent btn-sm fw-semibold px-3">
-                <i class="bi bi-box-arrow-in-right me-1"></i>Giriş
+              <button 
+                type="submit" 
+                class="btn btn-accent btn-sm fw-semibold px-3"
+                :disabled="loading || !loginForm.username || !loginForm.password">
+                <span v-if="loading" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                <i v-else class="bi bi-box-arrow-in-right me-1"></i>
+                {{ loading ? 'Giriş...' : 'Giriş' }}
               </button>
             </form>
 
-            <div class="vr mx-3 opacity-50"></div>
+            <div v-if="!authenticated" class="vr mx-3 opacity-50"></div>
             
-            <NuxtLink to="/auth/forgot-password" class="text-accent text-decoration-none small">
+            <NuxtLink v-if="!authenticated" to="/auth/forgot-password" class="text-accent text-decoration-none small">
               <i class="bi bi-key me-1"></i>Unuttum
             </NuxtLink>
           </div>
@@ -140,13 +157,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useAuthStore } from '~/store/auth'
+import { reactive } from 'vue'
 
-// Auth store
-const { authenticateUser } = useAuthStore()
-const { authenticated } = storeToRefs(useAuthStore())
+// Auth composable
+const { login, logout, authenticated, loading, user } = useAuth()
 
 // Login form data
 const loginForm = reactive({
@@ -157,24 +171,27 @@ const loginForm = reactive({
 
 // Login handler
 const handleLogin = async () => {
-  try {
-    await authenticateUser({
-      username: loginForm.username,
-      password: loginForm.password,
-      rememberMe: loginForm.rememberMe
-    })
-    
+  const result = await login({
+    tckn: loginForm.username,
+    password: loginForm.password
+  })
+
+  if (result.success) {
     // Reset form
     loginForm.username = ''
     loginForm.password = ''
     loginForm.rememberMe = false
     
     // Redirect to dashboard or home
-    await navigateTo('/dashboard')
-  } catch (error) {
-    console.error('Login error:', error)
-    // Handle login error (show toast, etc.)
+    await navigateTo('/')
+  } else {
+    console.error('Login error:', result.error)
   }
+}
+
+// Logout handler
+const handleLogout = async () => {
+  await logout()
 }
 </script>
 
