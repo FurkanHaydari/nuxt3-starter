@@ -28,27 +28,52 @@
                   v-model="form.tckn"
                   type="text" 
                   class="form-control" 
+                  :class="{ 'is-invalid': tcknError }"
                   id="tckn" 
                   placeholder="TC Kimlik Numarası"
                   maxlength="11"
                   :disabled="loading"
+                  @input="validateTcknField"
+                  @blur="validateTcknField"
                   required>
+                <div v-if="tcknError" class="invalid-feedback">
+                  {{ tcknError }}
+                </div>
               </div>
               
               <div class="mb-3">
                 <label for="password" class="form-label">Şifre</label>
-                <input 
-                  v-model="form.password"
-                  type="password" 
-                  class="form-control" 
-                  id="password"
-                  placeholder="Şifrenizi girin"
-                  :disabled="loading"
-                  required>
+                <div class="input-group">
+                  <input 
+                    v-model="form.password"
+                    :type="showPassword ? 'text' : 'password'" 
+                    class="form-control" 
+                    :class="{ 'is-invalid': passwordError }"
+                    id="password"
+                    placeholder="Şifrenizi girin"
+                    :disabled="loading"
+                    @input="validatePasswordField"
+                    @blur="validatePasswordField"
+                    required>
+                  <button 
+                    type="button" 
+                    class="btn btn-outline-secondary"
+                    @click="togglePasswordVisibility"
+                    :disabled="loading">
+                    <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+                  </button>
+                  <div v-if="passwordError" class="invalid-feedback">
+                    {{ passwordError }}
+                  </div>
+                </div>
               </div>
               
               <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" id="rememberMe">
+                <input 
+                  v-model="form.rememberMe"
+                  type="checkbox" 
+                  class="form-check-input" 
+                  id="rememberMe">
                 <label class="form-check-label" for="rememberMe">
                   Beni hatırla
                 </label>
@@ -57,7 +82,7 @@
               <button 
                 type="submit" 
                 class="btn btn-primary w-100 mb-3"
-                :disabled="loading || !form.tckn || !form.password">
+                :disabled="loading || !isFormValid">
                 <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
                 <i v-else class="bi bi-box-arrow-in-right me-2"></i>
                 {{ loading ? 'Giriş yapılıyor...' : 'Giriş Yap' }}
@@ -74,7 +99,7 @@
               <div class="text-center">
                 <span class="text-muted">Hesabınız yok mu? </span>
                 <NuxtLink to="/auth/register" class="text-decoration-none">
-                  Üye olun
+                  Ücretsiz Üye Ol
                 </NuxtLink>
               </div>
             </form>
@@ -95,17 +120,64 @@ useHead({
 })
 
 // Auth composable
-const { login, loading, hasError, error, clearError } = useAuth()
+const { 
+  login, 
+  loading, 
+  hasError, 
+  error, 
+  clearError, 
+  validateTckn, 
+  validatePassword,
+  getRememberedCredentials 
+} = useAuth()
 
 // Reactive form data
 const form = reactive({
   tckn: '',
-  password: ''
+  password: '',
+  rememberMe: false
 })
 
 // Local state
 const errorMessage = ref('')
 const successMessage = ref('')
+const showPassword = ref(false)
+const tcknError = ref('')
+const passwordError = ref('')
+
+// Form validation
+const isFormValid = computed(() => {
+  return form.tckn && 
+         form.password && 
+         !tcknError.value && 
+         !passwordError.value
+})
+
+// Load remembered credentials on mount
+onMounted(() => {
+  const remembered = getRememberedCredentials()
+  if (remembered.rememberMe) {
+    form.tckn = remembered.tckn
+    form.password = remembered.password
+    form.rememberMe = remembered.rememberMe
+  }
+})
+
+// Toggle password visibility
+const togglePasswordVisibility = () => {
+  showPassword.value = !showPassword.value
+}
+
+// Field validations
+const validateTcknField = () => {
+  const validation = validateTckn(form.tckn)
+  tcknError.value = validation.isValid ? '' : validation.error || ''
+}
+
+const validatePasswordField = () => {
+  const validation = validatePassword(form.password)
+  passwordError.value = validation.isValid ? '' : validation.error || ''
+}
 
 // Handle login
 const handleLogin = async () => {
@@ -113,9 +185,18 @@ const handleLogin = async () => {
   successMessage.value = ''
   clearError()
 
+  // Final validation before submit
+  validateTcknField()
+  validatePasswordField()
+
+  if (!isFormValid.value) {
+    return
+  }
+
   const result = await login({
     tckn: form.tckn,
-    password: form.password
+    password: form.password,
+    rememberMe: form.rememberMe
   })
 
   if (result.success) {
@@ -130,10 +211,32 @@ const handleLogin = async () => {
   }
 }
 
-// Clear messages when form changes
+// Clear messages and field errors when form changes
 watch([() => form.tckn, () => form.password], () => {
   errorMessage.value = ''
   successMessage.value = ''
   clearError()
+  
+  // Clear field errors when user starts typing
+  if (tcknError.value && form.tckn) {
+    tcknError.value = ''
+  }
+  if (passwordError.value && form.password) {
+    passwordError.value = ''
+  }
 })
 </script>
+
+<style scoped>
+.input-group .btn {
+  border-left: 0;
+}
+
+.input-group .form-control:focus + .btn {
+  border-color: #86b7fe;
+}
+
+.is-invalid ~ .btn {
+  border-color: #dc3545;
+}
+</style>

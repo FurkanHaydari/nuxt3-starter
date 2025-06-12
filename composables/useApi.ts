@@ -165,7 +165,7 @@ export const useApi = () => {
       isSuccess: response.success,
       data: response.data && mapper ? mapper(response.data) : (response.data as unknown as TFrontend),
       message: response.message,
-      error: response.errors ? response.errors.join(', ') : undefined
+      error: response.errors ? response.errors.join(', ') : response.message
     }
   }
 
@@ -190,9 +190,43 @@ export const useApi = () => {
     } catch (error: any) {
       console.error('API Error:', error)
       
+      // Handle different error response formats
+      let errorMessage = 'An unexpected error occurred'
+      
+      if (error?.data) {
+        // Backend returned structured error response
+        if (error.data.message) {
+          errorMessage = error.data.message
+        } else if (error.data.errors) {
+          // Handle ASP.NET Core validation errors format
+          if (typeof error.data.errors === 'object' && !Array.isArray(error.data.errors)) {
+            // Format: { "Password": ["Error message"], "Email": ["Another error"] }
+            const errorMessages = []
+            for (const [field, messages] of Object.entries(error.data.errors)) {
+              if (Array.isArray(messages)) {
+                errorMessages.push(...messages)
+              } else {
+                errorMessages.push(messages as string)
+              }
+            }
+            errorMessage = errorMessages.join(', ')
+          } else if (Array.isArray(error.data.errors)) {
+            // Format: ["Error 1", "Error 2"]
+            errorMessage = error.data.errors.join(', ')
+          }
+        } else if (error.data.title) {
+          // ASP.NET Core problem details format
+          errorMessage = error.data.title
+        } else if (typeof error.data === 'string') {
+          errorMessage = error.data
+        }
+      } else if (error?.message) {
+        errorMessage = error.message
+      }
+      
       return {
         isSuccess: false,
-        error: error?.data?.message || error?.message || 'An unexpected error occurred',
+        error: errorMessage,
       }
     }
   }

@@ -104,9 +104,12 @@
                   v-model="loginForm.username"
                   type="text"
                   class="form-control border-secondary bg-light"
+                  :class="{ 'is-invalid': headerTcknError }"
                   placeholder="TC Kimlik No"
                   aria-label="TC Kimlik No"
                   maxlength="11"
+                  @input="validateHeaderTckn"
+                  @blur="validateHeaderTckn"
                   required
                 >
               </div>
@@ -114,23 +117,41 @@
               <div class="input-group input-group-sm" style="width: 150px;">
                 <input
                   v-model="loginForm.password"
-                  type="password"
+                  :type="headerShowPassword ? 'text' : 'password'"
                   class="form-control border-secondary bg-light"
+                  :class="{ 'is-invalid': headerPasswordError }"
                   placeholder="Şifre"
                   aria-label="Şifre"
+                  @input="validateHeaderPassword"
+                  @blur="validateHeaderPassword"
                   required
                 >
+                <button 
+                  type="button" 
+                  class="btn btn-outline-secondary btn-sm"
+                  @click="toggleHeaderPasswordVisibility"
+                  :disabled="loading">
+                  <i :class="headerShowPassword ? 'bi bi-eye-slash' : 'bi bi-eye'" style="font-size: 0.75rem;"></i>
+                </button>
               </div>
 
               <button 
                 type="submit" 
                 class="btn btn-accent btn-sm fw-semibold px-3"
-                :disabled="loading || !loginForm.username || !loginForm.password">
+                :disabled="loading || !isHeaderFormValid">
                 <span v-if="loading" class="spinner-border spinner-border-sm me-1" role="status"></span>
                 <i v-else class="bi bi-box-arrow-in-right me-1"></i>
                 {{ loading ? 'Giriş...' : 'Giriş' }}
               </button>
             </form>
+
+            <!-- Error message for header login -->
+            <div v-if="headerError && !authenticated" class="position-absolute top-100 start-0 mt-2 w-100">
+              <div class="alert alert-danger alert-sm py-1 px-2 small" role="alert">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                {{ headerError }}
+              </div>
+            </div>
 
             <div v-if="!authenticated" class="vr mx-3 opacity-50"></div>
             
@@ -157,10 +178,19 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 
 // Auth composable
-const { login, logout, authenticated, loading, user } = useAuth()
+const { 
+  login, 
+  logout, 
+  authenticated, 
+  loading, 
+  user, 
+  validateTckn, 
+  validatePassword,
+  getRememberedCredentials 
+} = useAuth()
 
 // Login form data
 const loginForm = reactive({
@@ -169,11 +199,64 @@ const loginForm = reactive({
   rememberMe: false
 })
 
+// Header form state
+const headerError = ref('')
+const headerShowPassword = ref(false)
+const headerTcknError = ref('')
+const headerPasswordError = ref('')
+
+// Header form validation
+const isHeaderFormValid = computed(() => {
+  return loginForm.username && 
+         loginForm.password && 
+         !headerTcknError.value && 
+         !headerPasswordError.value
+})
+
+// Load remembered credentials on mount
+onMounted(() => {
+  const remembered = getRememberedCredentials()
+  if (remembered.rememberMe) {
+    loginForm.username = remembered.tckn
+    loginForm.password = remembered.password
+    loginForm.rememberMe = remembered.rememberMe
+  }
+})
+
+// Toggle password visibility for header
+const toggleHeaderPasswordVisibility = () => {
+  headerShowPassword.value = !headerShowPassword.value
+}
+
+// Header field validations
+const validateHeaderTckn = () => {
+  const validation = validateTckn(loginForm.username)
+  headerTcknError.value = validation.isValid ? '' : validation.error || ''
+  headerError.value = '' // Clear general error when user starts typing
+}
+
+const validateHeaderPassword = () => {
+  const validation = validatePassword(loginForm.password)
+  headerPasswordError.value = validation.isValid ? '' : validation.error || ''
+  headerError.value = '' // Clear general error when user starts typing
+}
+
 // Login handler
 const handleLogin = async () => {
+  headerError.value = ''
+  
+  // Final validation before submit
+  validateHeaderTckn()
+  validateHeaderPassword()
+
+  if (!isHeaderFormValid.value) {
+    return
+  }
+
   const result = await login({
     tckn: loginForm.username,
-    password: loginForm.password
+    password: loginForm.password,
+    rememberMe: loginForm.rememberMe
   })
 
   if (result.success) {
@@ -181,11 +264,14 @@ const handleLogin = async () => {
     loginForm.username = ''
     loginForm.password = ''
     loginForm.rememberMe = false
+    headerError.value = ''
+    headerTcknError.value = ''
+    headerPasswordError.value = ''
     
     // Redirect to dashboard or home
     await navigateTo('/')
   } else {
-    console.error('Login error:', result.error)
+    headerError.value = result.error || 'Giriş yapılırken bir hata oluştu'
   }
 }
 
@@ -359,5 +445,33 @@ const handleLogout = async () => {
 /* Vertical Divider */
 .vr {
   background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Header form validation styles */
+.input-group-sm .form-control.is-invalid {
+  border-color: #dc3545;
+}
+
+.input-group-sm .btn {
+  border-left: 0;
+}
+
+.input-group-sm .form-control:focus + .btn {
+  border-color: #86b7fe;
+}
+
+.is-invalid ~ .btn {
+  border-color: #dc3545;
+}
+
+/* Header error alert */
+.alert-sm {
+  font-size: 0.75rem;
+  border-radius: 0.375rem;
+}
+
+/* Position relative for error positioning */
+.d-none.d-lg-flex {
+  position: relative;
 }
 </style> 
