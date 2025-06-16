@@ -312,8 +312,8 @@ export const useAuth = () => {
     }
   }
 
-  // Forgot password function
-  const forgotPassword = async (data: { tckn: string; phoneNumber: string }) => {
+  // Forgot password function (Step 1: TC + Birth Date)
+  const forgotPassword = async (data: { tckn: string; birthDate: string }) => {
     authStore.setLoading(true)
     authStore.clearError()
 
@@ -322,9 +322,34 @@ export const useAuth = () => {
       const response = await api.auth.forgotPassword(data)
 
       if (response.isSuccess) {
-        return { success: true, message: response.data || 'Şifre sıfırlama kodu gönderildi' }
+        return { success: true, data: response.data }
       } else {
         const error = response.error || 'Şifre sıfırlama isteği gönderilemedi'
+        authStore.setError(error)
+        return { success: false, error }
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Beklenmeyen bir hata oluştu'
+      authStore.setError(errorMessage)
+      return { success: false, error: errorMessage }
+    } finally {
+      authStore.setLoading(false)
+    }
+  }
+
+  // Select reset method function (Step 2: Email/SMS Selection)
+  const selectResetMethod = async (data: { tckn: string; birthDate: string; method: number }) => {
+    authStore.setLoading(true)
+    authStore.clearError()
+
+    try {
+      const api = useApi()
+      const response = await api.auth.selectResetMethod(data)
+
+      if (response.isSuccess) {
+        return { success: true, message: response.data || 'Şifre sıfırlama bağlantısı gönderildi' }
+      } else {
+        const error = response.error || 'Şifre sıfırlama bağlantısı gönderilemedi'
         authStore.setError(error)
         return { success: false, error }
       }
@@ -358,6 +383,7 @@ export const useAuth = () => {
     register,
     logout,
     forgotPassword,
+    selectResetMethod,
     checkAuth,
     
     // State (computed refs from store)

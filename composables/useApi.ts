@@ -69,7 +69,22 @@ interface RegisterResponse {
 
 interface ForgotPasswordRequest {
   tckn: string
-  phoneNumber: string
+  birthDate: string
+}
+
+interface ForgotPasswordResponse {
+  success: boolean
+  message: string
+  maskedEmail?: string
+  maskedPhone?: string
+  hasEmail: boolean
+  hasPhone: boolean
+}
+
+interface SelectResetMethodRequest {
+  tckn: string
+  birthDate: string
+  method: number // 1 = Email, 2 = SMS
 }
 
 interface ResetPasswordRequest {
@@ -103,6 +118,16 @@ interface VerifyEmailRequest {
 interface VerifyPhoneRequest {
   newPhoneNumber: string
   verificationCode: string
+}
+
+interface ValidateResetTokenRequest {
+  token: string
+}
+
+interface ValidateResetTokenResponse {
+  isValid: boolean
+  message?: string
+  expiresAt?: string
 }
 
 export const useApi = () => {
@@ -272,8 +297,22 @@ export const useApi = () => {
         })
       },
 
-      async forgotPassword(data: ForgotPasswordRequest): Promise<ApiResponse<string>> {
-        return apiCall<string>('/auth/forgot-password', {
+      async forgotPassword(data: ForgotPasswordRequest): Promise<ApiResponse<ForgotPasswordResponse>> {
+        return apiCall<ForgotPasswordResponse>('/auth/forgot-password', {
+          method: 'POST',
+          body: data,
+        })
+      },
+
+      async selectResetMethod(data: SelectResetMethodRequest): Promise<ApiResponse<string>> {
+        return apiCall<string>('/auth/select-reset-method', {
+          method: 'POST',
+          body: data,
+        })
+      },
+
+      async validateResetToken(data: ValidateResetTokenRequest): Promise<ApiResponse<ValidateResetTokenResponse>> {
+        return apiCall<ValidateResetTokenResponse>('/auth/validate-reset-token', {
           method: 'POST',
           body: data,
         })
@@ -287,7 +326,7 @@ export const useApi = () => {
       },
 
       async resetPassword(data: ResetPasswordRequest): Promise<ApiResponse<string>> {
-        return apiCall<string>('/auth/reset-password', {
+        return apiCall<string>('/auth/reset-password-with-token', {
           method: 'POST',
           body: data,
         })

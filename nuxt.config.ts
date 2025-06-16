@@ -13,8 +13,8 @@ export default defineNuxtConfig({
     // Runtime Config
     runtimeConfig: {
         public: {
-            apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'https://localhost:7000/api/v1',
-            apiTimeout: process.env.NUXT_PUBLIC_API_TIMEOUT || 30000,
+            apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1',
+            apiTimeout: Number(process.env.NUXT_PUBLIC_API_TIMEOUT) || 30000,
             tokenCookieName: process.env.NUXT_PUBLIC_TOKEN_COOKIE_NAME || 'auth-token',
             refreshTokenCookieName: process.env.NUXT_PUBLIC_REFRESH_TOKEN_COOKIE_NAME || 'refresh-token',
         }
