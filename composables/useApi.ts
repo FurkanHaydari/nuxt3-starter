@@ -27,7 +27,7 @@ interface ApiResponse<T = any> {
 }
 
 interface LoginRequest {
-  tckn: string
+  tcknOrMemberNumber: string
   password: string
 }
 

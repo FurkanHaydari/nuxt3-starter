@@ -101,15 +101,14 @@
             <form v-else @submit.prevent="handleLogin" class="d-flex align-items-center gap-2">
               <div class="input-group input-group-sm" style="width: 200px;">
                 <input
-                  v-model="loginForm.username"
+                  v-model="loginForm.tcknOrMemberNumber"
                   type="text"
                   class="form-control border-secondary bg-light"
                   :class="{ 'is-invalid': headerTcknError }"
-                  placeholder="TC Kimlik No"
-                  aria-label="TC Kimlik No"
-                  maxlength="11"
-                  @input="validateHeaderTckn"
-                  @blur="validateHeaderTckn"
+                  placeholder="TC Kimlik/Üye No"
+                  aria-label="TC Kimlik/Üye No"
+                  @input="validateHeaderTcknOrMemberNumber"
+                  @blur="validateHeaderTcknOrMemberNumber"
                   required
                 >
               </div>
@@ -222,7 +221,7 @@ const {
 
 // Login form data
 const loginForm = reactive({
-  username: '',
+  tcknOrMemberNumber: '',
   password: '',
   rememberMe: false
 })
@@ -235,7 +234,7 @@ const headerPasswordError = ref('')
 
 // Header form validation
 const isHeaderFormValid = computed(() => {
-  return loginForm.username && 
+  return loginForm.tcknOrMemberNumber && 
          loginForm.password && 
          !headerTcknError.value && 
          !headerPasswordError.value
@@ -245,7 +244,7 @@ const isHeaderFormValid = computed(() => {
 onMounted(() => {
   const remembered = getRememberedCredentials()
   if (remembered.rememberMe) {
-    loginForm.username = remembered.tckn
+    loginForm.tcknOrMemberNumber = remembered.tckn
     loginForm.password = remembered.password
     loginForm.rememberMe = remembered.rememberMe
   }
@@ -257,8 +256,8 @@ const toggleHeaderPasswordVisibility = () => {
 }
 
 // Header field validations
-const validateHeaderTckn = () => {
-  const validation = validateTckn(loginForm.username)
+const validateHeaderTcknOrMemberNumber = () => {
+  const validation = validateTckn(loginForm.tcknOrMemberNumber)
   headerTcknError.value = validation.isValid ? '' : validation.error || ''
   headerError.value = '' // Clear general error when user starts typing
 }
@@ -274,7 +273,7 @@ const handleLogin = async () => {
   headerError.value = ''
   
   // Final validation before submit
-  validateHeaderTckn()
+  validateHeaderTcknOrMemberNumber()
   validateHeaderPassword()
 
   if (!isHeaderFormValid.value) {
@@ -282,14 +281,14 @@ const handleLogin = async () => {
   }
 
   const result = await login({
-    tckn: loginForm.username,
+    tckn: loginForm.tcknOrMemberNumber,
     password: loginForm.password,
     rememberMe: loginForm.rememberMe
   })
 
   if (result.success) {
     // Reset form
-    loginForm.username = ''
+    loginForm.tcknOrMemberNumber = ''
     loginForm.password = ''
     loginForm.rememberMe = false
     headerError.value = ''

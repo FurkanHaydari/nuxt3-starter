@@ -23,18 +23,17 @@
             
             <form @submit.prevent="handleLogin">
               <div class="mb-3">
-                <label for="tckn" class="form-label">TC Kimlik Numarası</label>
+                <label for="tcknOrMemberNumber" class="form-label">TC Kimlik No / Üye No</label>
                 <input 
-                  v-model="form.tckn"
+                  v-model="form.tcknOrMemberNumber"
                   type="text" 
                   class="form-control" 
                   :class="{ 'is-invalid': tcknError }"
-                  id="tckn" 
-                  placeholder="TC Kimlik Numarası"
-                  maxlength="11"
+                  id="tcknOrMemberNumber" 
+                  placeholder="TC Kimlik No veya Üye No"
                   :disabled="loading"
-                  @input="validateTcknField"
-                  @blur="validateTcknField"
+                  @input="validateTcknOrMemberNumberField"
+                  @blur="validateTcknOrMemberNumberField"
                   required>
                 <div v-if="tcknError" class="invalid-feedback">
                   {{ tcknError }}
@@ -133,7 +132,7 @@ const {
 
 // Reactive form data
 const form = reactive({
-  tckn: '',
+  tcknOrMemberNumber: '',
   password: '',
   rememberMe: false
 })
@@ -147,7 +146,7 @@ const passwordError = ref('')
 
 // Form validation
 const isFormValid = computed(() => {
-  return form.tckn && 
+  return form.tcknOrMemberNumber && 
          form.password && 
          !tcknError.value && 
          !passwordError.value
@@ -157,7 +156,7 @@ const isFormValid = computed(() => {
 onMounted(() => {
   const remembered = getRememberedCredentials()
   if (remembered.rememberMe) {
-    form.tckn = remembered.tckn
+    form.tcknOrMemberNumber = remembered.tckn
     form.password = remembered.password
     form.rememberMe = remembered.rememberMe
   }
@@ -169,8 +168,8 @@ const togglePasswordVisibility = () => {
 }
 
 // Field validations
-const validateTcknField = () => {
-  const validation = validateTckn(form.tckn)
+const validateTcknOrMemberNumberField = () => {
+  const validation = validateTckn(form.tcknOrMemberNumber)
   tcknError.value = validation.isValid ? '' : validation.error || ''
 }
 
@@ -186,7 +185,7 @@ const handleLogin = async () => {
   clearError()
 
   // Final validation before submit
-  validateTcknField()
+  validateTcknOrMemberNumberField()
   validatePasswordField()
 
   if (!isFormValid.value) {
@@ -194,31 +193,27 @@ const handleLogin = async () => {
   }
 
   const result = await login({
-    tckn: form.tckn,
+    tckn: form.tcknOrMemberNumber,
     password: form.password,
     rememberMe: form.rememberMe
   })
 
   if (result.success) {
-    successMessage.value = 'Giriş başarılı! Yönlendiriliyorsunuz...'
-    
-    // Redirect to dashboard or home
-    setTimeout(() => {
-      navigateTo('/')
-    }, 1500)
+    // Redirect directly to dashboard or home
+    await navigateTo('/')
   } else {
     errorMessage.value = result.error || 'Giriş yapılırken bir hata oluştu'
   }
 }
 
 // Clear messages and field errors when form changes
-watch([() => form.tckn, () => form.password], () => {
+watch([() => form.tcknOrMemberNumber, () => form.password], () => {
   errorMessage.value = ''
   successMessage.value = ''
   clearError()
   
   // Clear field errors when user starts typing
-  if (tcknError.value && form.tckn) {
+  if (tcknError.value && form.tcknOrMemberNumber) {
     tcknError.value = ''
   }
   if (passwordError.value && form.password) {

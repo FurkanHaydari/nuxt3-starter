@@ -218,7 +218,7 @@ export const useAuth = () => {
       // Call API
       const api = useApi()
       const response = await api.auth.login({
-        tckn: credentials.tckn,
+        tcknOrMemberNumber: credentials.tckn,
         password: credentials.password
       })
 
