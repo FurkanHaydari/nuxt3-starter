@@ -43,6 +43,31 @@ interface RegisterRequest {
   birthDate: string
 }
 
+interface RegisterRequestData {
+  firstName: string
+  lastName: string
+  tckn: string
+  birthDate: string
+  email: string
+  phoneNumber: string
+  professionId: number
+  password: string
+  marketingConsent: boolean
+  electronicCommunicationConsent: boolean
+  membershipAgreementConsent: boolean
+}
+
+interface VerifyRegistrationRequest {
+  phoneNumber: string
+  otpCode: string
+}
+
+interface VerifyRegistrationResponse {
+  success: boolean
+  message: string
+  userId?: string
+}
+
 interface LoginResponse {
   accessToken: string
   refreshToken: string
@@ -128,6 +153,13 @@ interface ValidateResetTokenResponse {
   isValid: boolean
   message?: string
   expiresAt?: string
+}
+
+interface ProfessionDto {
+  id: number
+  name: string
+  isActive: boolean
+  sortOrder: number
 }
 
 export const useApi = () => {
@@ -297,6 +329,20 @@ export const useApi = () => {
         })
       },
 
+      async registerRequest(userData: RegisterRequestData): Promise<ApiResponse<RegisterResponse>> {
+        return apiCall<RegisterResponse>('/auth/register-request', {
+          method: 'POST',
+          body: userData,
+        })
+      },
+
+      async verifyRegistration(data: VerifyRegistrationRequest): Promise<ApiResponse<VerifyRegistrationResponse>> {
+        return apiCall<VerifyRegistrationResponse>('/auth/verify-registration', {
+          method: 'POST',
+          body: data,
+        })
+      },
+
       async forgotPassword(data: ForgotPasswordRequest): Promise<ApiResponse<ForgotPasswordResponse>> {
         return apiCall<ForgotPasswordResponse>('/auth/forgot-password', {
           method: 'POST',
@@ -406,6 +452,10 @@ export const useApi = () => {
 
       async getPermissions(): Promise<ApiResponse<string[]>> {
         return authenticatedApiCall<string[]>('/auth/permissions')
+      },
+
+      async getProfessions(): Promise<ApiResponse<ProfessionDto[]>> {
+        return apiCall<ProfessionDto[]>('/professions')
       },
     },
   }

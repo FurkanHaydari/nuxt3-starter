@@ -155,19 +155,47 @@
 
             <div v-if="!authenticated" class="vr mx-3 opacity-50"></div>
             
-            <NuxtLink v-if="!authenticated" to="/auth/forgot-password" class="text-accent text-decoration-none small">
-              <i class="bi bi-key me-1"></i>Unuttum
-            </NuxtLink>
+            <div v-if="!authenticated" class="d-flex align-items-center gap-2">
+              <NuxtLink to="/auth/forgot-password" class="text-accent text-decoration-none small">
+                <i class="bi bi-key me-1"></i>Unuttum
+              </NuxtLink>
+              
+              <div class="vr mx-2 opacity-50"></div>
+              
+              <!-- Dikkat Çekici Register Butonu -->
+              <NuxtLink to="/auth/register" class="btn btn-gradient-primary btn-sm fw-bold px-3 position-relative register-btn-animated">
+                <i class="bi bi-person-plus me-1"></i>
+                <span>Üye Ol</span>
+                <span class="badge bg-warning text-dark ms-2 pulse-animation">BONUS</span>
+              </NuxtLink>
+            </div>
           </div>
 
           <!-- Mobil Login Butonlar -->
           <div class="d-lg-none mt-3">
-            <div class="d-flex gap-2">
-              <NuxtLink to="/auth/login" class="btn btn-accent btn-sm flex-fill">
+            <div v-if="authenticated" class="text-center">
+              <span class="text-light d-block mb-2">
+                <i class="bi bi-person-circle me-1"></i>
+                Hoş geldiniz
+                <template v-if="user?.firstName || user?.lastName">
+                  <strong>{{ user?.firstName }} {{ user?.lastName }}</strong>
+                </template>
+                <template v-else-if="user?.username">
+                  <strong>{{ user?.username }}</strong>
+                </template>
+                !
+              </span>
+              <button @click="handleLogout" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-box-arrow-right me-1"></i>Çıkış
+              </button>
+            </div>
+            <div v-else class="d-flex gap-2">
+              <NuxtLink to="/auth/login" class="btn btn-accent btn-sm" style="flex: 1;">
                 <i class="bi bi-box-arrow-in-right me-1"></i>Giriş Yap
               </NuxtLink>
-              <NuxtLink to="/auth/register" class="btn btn-outline-accent btn-sm flex-fill">
+              <NuxtLink to="/auth/register" class="btn btn-gradient-primary btn-sm fw-bold position-relative" style="flex: 1.5;">
                 <i class="bi bi-person-plus me-1"></i>Üye Ol
+                <span class="badge bg-warning text-dark ms-1 small">BONUS</span>
               </NuxtLink>
             </div>
           </div>
@@ -473,5 +501,88 @@ const handleLogout = async () => {
 /* Position relative for error positioning */
 .d-none.d-lg-flex {
   position: relative;
+}
+
+/* Gradient Register Button */
+.btn-gradient-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white !important;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-gradient-primary:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+  color: white !important;
+}
+
+.btn-gradient-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4);
+}
+
+/* Register Button Animation */
+.register-btn-animated {
+  animation: subtle-glow 3s ease-in-out infinite;
+}
+
+.register-btn-animated:hover {
+  animation: none;
+}
+
+@keyframes subtle-glow {
+  0%, 100% {
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6);
+  }
+}
+
+/* Pulse Animation for BONUS Badge */
+.pulse-animation {
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+/* Badge Styling */
+.badge.bg-warning {
+  background: linear-gradient(45deg, #ffc107, #ff8f00) !important;
+  color: #000 !important;
+  font-weight: 700;
+  font-size: 0.65rem;
+  border-radius: 12px;
+  padding: 0.25rem 0.5rem;
+  text-shadow: none;
+  box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 991.98px) {
+  .btn-gradient-primary {
+    font-size: 0.875rem;
+  }
+  
+  .badge.bg-warning {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.4rem;
+  }
 }
 </style> 

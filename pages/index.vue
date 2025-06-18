@@ -22,6 +22,9 @@ const {
   stopDynamicUpdates
 } = useSportsData()
 
+// Auth state
+const { authenticated } = useAuth()
+
 // Inject selected sport from layout  
 const selectedSport = inject('selectedSport', ref('futbol')) as Ref<string>
 
@@ -327,6 +330,51 @@ onUnmounted(() => {
       :selected-sport-icon="selectedSportInfo.icon"
     />
 
+    <!-- Register CTA Section -->
+    <section v-if="!authenticated" class="register-cta py-5 bg-gradient-register text-white">
+      <div class="container">
+        <div class="row align-items-center">
+          <div class="col-lg-8">
+            <div class="cta-content">
+              <h2 class="display-5 fw-bold mb-3">
+                <i class="bi bi-gift-fill text-warning me-3"></i>
+                Hemen Üye Ol, Bonus Kazan!
+              </h2>
+              <p class="lead mb-4">
+                🎁 <strong>%100 Hoş Geldin Bonusu</strong> ile başla<br>
+                ⚡ Anında üyelik, hızlı ödemeler<br>
+                🏆 Türkiye'nin en güvenilir bahis platformu
+              </p>
+              <div class="bonus-highlight p-3 rounded mb-4" style="background: rgba(255, 255, 255, 0.1); border: 2px dashed #ffc107;">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-star-fill text-warning fs-2 me-3"></i>
+                  <div>
+                    <h5 class="mb-1 fw-bold">İlk Yatırımına %100 Bonus!</h5>
+                    <small class="opacity-75">500 TL yatır, 1000 TL ile bahis yap</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4 text-center">
+            <div class="cta-action">
+              <NuxtLink to="/auth/register" class="btn btn-warning btn-lg px-5 py-3 fw-bold mb-3 register-cta-btn">
+                <i class="bi bi-person-plus me-2"></i>
+                ÜYE OL & BONUS KAZAN
+                <span class="d-block small mt-1">2 dakikada tamamla</span>
+              </NuxtLink>
+              <div class="text-center">
+                <small class="opacity-75">
+                  <i class="bi bi-shield-check me-1"></i>
+                  %100 Güvenli • SSL Korumalı
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Özellikler -->
     <section class="features py-5 bg-light">
       <div class="container">
@@ -582,13 +630,106 @@ onUnmounted(() => {
   }
 }
 
+/* Register CTA Section */
+.bg-gradient-register {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.bg-gradient-register::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="80" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="70" r="1" fill="rgba(255,255,255,0.05)"/></svg>') repeat;
+  animation: float-bg 20s linear infinite;
+}
+
+@keyframes float-bg {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-100px); }
+}
+
+.register-cta-btn {
+  background: linear-gradient(45deg, #ffc107, #ff8f00);
+  border: none;
+  color: #000 !important;
+  font-weight: 800;
+  text-shadow: none;
+  box-shadow: 0 8px 25px rgba(255, 193, 7, 0.4);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.register-cta-btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 12px 35px rgba(255, 193, 7, 0.6);
+  color: #000 !important;
+  animation: none;
+}
+
+.register-cta-btn:active {
+  transform: translateY(-1px) scale(1.02);
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 8px 25px rgba(255, 193, 7, 0.4);
+  }
+  50% {
+    box-shadow: 0 8px 35px rgba(255, 193, 7, 0.6);
+  }
+}
+
+.bonus-highlight {
+  animation: subtle-bounce 4s ease-in-out infinite;
+}
+
+@keyframes subtle-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.cta-content h2 {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive CTA */
+@media (max-width: 991.98px) {
+  .register-cta .col-lg-8,
+  .register-cta .col-lg-4 {
+    text-align: center;
+  }
+  
+  .register-cta .col-lg-4 {
+    margin-top: 2rem;
+  }
+  
+  .register-cta-btn {
+    width: 100%;
+    max-width: 300px;
+  }
+}
+
 /* Animations */
 @media (prefers-reduced-motion: reduce) {
   .hero-illustration,
   .live-indicator,
   .match-card,
   .event-card,
-  .feature-item {
+  .feature-item,
+  .register-cta-btn,
+  .bonus-highlight,
+  .bg-gradient-register::before {
     animation: none;
     transition: none;
   }

@@ -18,6 +18,25 @@ interface RegisterData {
   birthDate: string
 }
 
+interface RegisterRequestData {
+  firstName: string
+  lastName: string
+  tckn: string
+  birthDate: string
+  email: string
+  phoneNumber: string
+  professionId: number
+  password: string
+  marketingConsent: boolean
+  electronicCommunicationConsent: boolean
+  membershipAgreementConsent: boolean
+}
+
+interface VerifyRegistrationData {
+  phoneNumber: string
+  otpCode: string
+}
+
 // TCKN validation function
 const validateTckn = (tckn: string): { isValid: boolean; error?: string } => {
   if (!tckn || tckn.trim() === '') {
@@ -262,7 +281,7 @@ export const useAuth = () => {
     }
   }
 
-  // Register function
+  // Register function (legacy)
   const register = async (userData: RegisterData) => {
     authStore.setLoading(true)
     authStore.clearError()
@@ -275,6 +294,57 @@ export const useAuth = () => {
         return { success: true, message: response.data?.message || 'Kayıt başarılı' }
       } else {
         const error = response.error || 'Kayıt olurken bir hata oluştu'
+        authStore.setError(error)
+        return { success: false, error }
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Beklenmeyen bir hata oluştu'
+      authStore.setError(errorMessage)
+      return { success: false, error: errorMessage }
+    } finally {
+      authStore.setLoading(false)
+    }
+  }
+
+  // SMS OTP Registration - Step 1: Request registration with SMS OTP
+  const registerRequest = async (userData: RegisterRequestData) => {
+    authStore.setLoading(true)
+    authStore.clearError()
+
+    try {
+      const api = useApi()
+      const response = await api.auth.registerRequest(userData)
+
+      if (response.isSuccess) {
+        return { success: true, message: response.data?.message || 'SMS kodu gönderildi' }
+      } else {
+        const error = response.error || 'SMS kodu gönderilirken bir hata oluştu'
+        authStore.setError(error)
+        return { success: false, error }
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Beklenmeyen bir hata oluştu'
+      authStore.setError(errorMessage)
+      return { success: false, error: errorMessage }
+    } finally {
+      authStore.setLoading(false)
+    }
+  }
+
+  // SMS OTP Registration - Step 2: Verify OTP and complete registration
+  const verifyRegistration = async (data: VerifyRegistrationData) => {
+    authStore.setLoading(true)
+    authStore.clearError()
+
+    try {
+      const api = useApi()
+      const response = await api.auth.verifyRegistration(data)
+
+      if (response.isSuccess && response.data?.success) {
+        return { success: true, message: response.data?.message || 'Kayıt başarıyla tamamlandı' }
+      } else {
+        // Use the specific error message from data.message if available
+        const error = response.data?.message || response.error || 'SMS doğrulama başarısız'
         authStore.setError(error)
         return { success: false, error }
       }
@@ -381,6 +451,8 @@ export const useAuth = () => {
     // Actions
     login,
     register,
+    registerRequest,
+    verifyRegistration,
     logout,
     forgotPassword,
     selectResetMethod,
