@@ -21,21 +21,20 @@
               {{ successMessage }}
             </div>
 
-            <!-- Step 1: TC Kimlik No + Doğum Tarihi -->
+            <!-- Step 1: TC Kimlik No/Üye No + Doğum Tarihi -->
             <form v-if="currentStep === 1" @submit.prevent="handleStep1Submit">
               <div class="mb-3">
-                <label for="tckn" class="form-label">TC Kimlik No *</label>
+                <label for="tcknOrMemberNumber" class="form-label">TC Kimlik No / Üye No *</label>
                 <input 
-                  v-model="step1Form.tckn"
+                  v-model="step1Form.tcknOrMemberNumber"
                   type="text" 
                   class="form-control" 
                   :class="{ 'is-invalid': tcknError }"
-                  id="tckn" 
-                  placeholder="TC Kimlik Numarası"
-                  maxlength="11"
+                  id="tcknOrMemberNumber" 
+                  placeholder="TC Kimlik No veya Üye No"
                   :disabled="loading"
-                  @input="validateTcknField"
-                  @blur="validateTcknField"
+                  @input="validateTcknOrMemberNumberField"
+                  @blur="validateTcknOrMemberNumberField"
                   required>
                 <div v-if="tcknError" class="invalid-feedback">
                   {{ tcknError }}
@@ -188,7 +187,7 @@ const currentStep = ref(1) // 1: TC+DoğumTarihi, 2: Email/SMS Seçimi, 3: Başa
 
 // Form data
 const step1Form = reactive({
-  tckn: '',
+  tcknOrMemberNumber: '',
   birthDate: ''
 })
 
@@ -230,7 +229,7 @@ const minBirthDate = computed(() => {
 // Computed properties
 const currentStepDescription = computed(() => {
   switch (currentStep.value) {
-    case 1: return 'TC Kimlik No ve Doğum Tarihinizi girin'
+    case 1: return 'TC Kimlik No/Üye No ve Doğum Tarihinizi girin'
     case 2: return 'Şifre sıfırlama yöntemini seçin'
     case 3: return 'İşlem tamamlandı'
     default: return ''
@@ -238,15 +237,15 @@ const currentStepDescription = computed(() => {
 })
 
 const isStep1Valid = computed(() => {
-  return step1Form.tckn && 
+  return step1Form.tcknOrMemberNumber && 
          step1Form.birthDate && 
          !tcknError.value && 
          !birthDateError.value
 })
 
 // Validation functions
-const validateTcknField = () => {
-  const validation = validateTckn(step1Form.tckn)
+const validateTcknOrMemberNumberField = () => {
+  const validation = validateTckn(step1Form.tcknOrMemberNumber)
   tcknError.value = validation.isValid ? '' : validation.error || ''
 }
 
@@ -293,7 +292,7 @@ const handleStep1Submit = async () => {
   successMessage.value = ''
   
   // Final validation
-  validateTcknField()
+  validateTcknOrMemberNumberField()
   validateBirthDateField()
   
   if (!isStep1Valid.value) {
@@ -305,7 +304,7 @@ const handleStep1Submit = async () => {
   try {
     const api = useApi()
     const response = await api.auth.forgotPassword({
-      tckn: step1Form.tckn,
+      tcknOrMemberNumber: step1Form.tcknOrMemberNumber,
       birthDate: step1Form.birthDate + 'T00:00:00Z'
     })
 
@@ -346,7 +345,7 @@ const handleStep2Submit = async () => {
   try {
     const api = useApi()
     const response = await api.auth.selectResetMethod({
-      tckn: step1Form.tckn,
+      tcknOrMemberNumber: step1Form.tcknOrMemberNumber,
       birthDate: step1Form.birthDate + 'T00:00:00Z',
       method: step2Form.method === 'email' ? 1 : 2 // ResetMethod enum
     })
@@ -373,7 +372,7 @@ const goBackToStep1 = () => {
 
 const resetToStep1 = () => {
   currentStep.value = 1
-  step1Form.tckn = ''
+  step1Form.tcknOrMemberNumber = ''
   step1Form.birthDate = ''
   step2Form.method = ''
   errorMessage.value = ''

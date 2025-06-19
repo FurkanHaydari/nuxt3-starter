@@ -93,7 +93,7 @@ interface RegisterResponse {
 }
 
 interface ForgotPasswordRequest {
-  tckn: string
+  tcknOrMemberNumber: string
   birthDate: string
 }
 
@@ -107,7 +107,7 @@ interface ForgotPasswordResponse {
 }
 
 interface SelectResetMethodRequest {
-  tckn: string
+  tcknOrMemberNumber: string
   birthDate: string
   method: number // 1 = Email, 2 = SMS
 }
