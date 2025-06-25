@@ -118,8 +118,10 @@ interface ResetPasswordRequest {
 }
 
 interface ChangePasswordRequest {
+  tcKimlikNo: string
   currentPassword: string
   newPassword: string
+  confirmNewPassword: string
 }
 
 interface UpdateProfileRequest {
@@ -252,11 +254,23 @@ export const useApi = () => {
       
       if (error?.data) {
         // Backend returned structured error response
-        if (error.data.message) {
+        
+        // Handle ASP.NET Core ProblemDetails format first
+        if (error.data.detail) {
+          errorMessage = error.data.detail
+        } else if (error.data.title) {
+          errorMessage = error.data.title
+        } else if (error.data.message) {
           errorMessage = error.data.message
+        } else if (error.data.error) {
+          // Some APIs return error field instead of message
+          errorMessage = error.data.error
         } else if (error.data.errors) {
           // Handle ASP.NET Core validation errors format
-          if (typeof error.data.errors === 'object' && !Array.isArray(error.data.errors)) {
+          if (Array.isArray(error.data.errors)) {
+            // Format: ["Error 1", "Error 2"] or from ProblemDetails.Extensions["errors"]
+            errorMessage = error.data.errors.join(', ')
+          } else if (typeof error.data.errors === 'object') {
             // Format: { "Password": ["Error message"], "Email": ["Another error"] }
             const errorMessages = []
             for (const [field, messages] of Object.entries(error.data.errors)) {
@@ -267,15 +281,18 @@ export const useApi = () => {
               }
             }
             errorMessage = errorMessages.join(', ')
-          } else if (Array.isArray(error.data.errors)) {
-            // Format: ["Error 1", "Error 2"]
-            errorMessage = error.data.errors.join(', ')
           }
-        } else if (error.data.title) {
-          // ASP.NET Core problem details format
-          errorMessage = error.data.title
         } else if (typeof error.data === 'string') {
           errorMessage = error.data
+        }
+      } else if (error?.response?.data) {
+        // Alternative error response format
+        if (error.response.data.detail) {
+          errorMessage = error.response.data.detail
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error
         }
       } else if (error?.message) {
         errorMessage = error.message
@@ -379,33 +396,81 @@ export const useApi = () => {
       },
 
       async changePassword(data: ChangePasswordRequest): Promise<ApiResponse<string>> {
-        return authenticatedApiCall<string>('/auth/change-password', {
+        return apiCall<string>('/auth/change-password', {
           method: 'POST',
           body: data,
         })
       },
 
       async refreshToken(refreshToken: string): Promise<ApiResponse<LoginResponse>> {
-        return apiCall<LoginResponse>('/auth/refresh', {
+        return apiCall<BackendLoginData, LoginResponse>('/auth/refresh', {
           method: 'POST',
           body: { refreshToken },
-        })
+        }, mapLoginResponse)
       },
 
       async logout(): Promise<void> {
-        // Clear tokens from cookies
-        const tokenCookie = useCookie(config.public.tokenCookieName as string)
-        const refreshTokenCookie = useCookie(config.public.refreshTokenCookieName as string)
-        
-        tokenCookie.value = null
-        refreshTokenCookie.value = null
+        // Just clear local state, no server call needed
+        return Promise.resolve()
       },
+
+      async getProfile(): Promise<ApiResponse<any>> {
+        return authenticatedApiCall<any>('/auth/profile', {
+          method: 'GET',
+        })
+      },
+
+      async updateProfile(data: UpdateProfileRequest): Promise<ApiResponse<string>> {
+        return authenticatedApiCall<string>('/auth/profile', {
+          method: 'PUT',
+          body: data,
+        })
+      },
+
+      async updateEmail(data: UpdateEmailRequest): Promise<ApiResponse<string>> {
+        return authenticatedApiCall<string>('/auth/profile/email', {
+          method: 'PUT',
+          body: data,
+        })
+      },
+
+      async verifyEmail(data: VerifyEmailRequest): Promise<ApiResponse<string>> {
+        return authenticatedApiCall<string>('/auth/profile/verify-email', {
+          method: 'POST',
+          body: data,
+        })
+      },
+
+      async updatePhone(data: UpdatePhoneRequest): Promise<ApiResponse<string>> {
+        return authenticatedApiCall<string>('/auth/profile/phone', {
+          method: 'PUT',
+          body: data,
+        })
+      },
+
+      async verifyPhone(data: VerifyPhoneRequest): Promise<ApiResponse<string>> {
+        return authenticatedApiCall<string>('/auth/profile/verify-phone', {
+          method: 'POST',
+          body: data,
+        })
+      }
+    },
+
+    // Profession endpoints
+    profession: {
+      async getProfessions(): Promise<ApiResponse<ProfessionDto[]>> {
+        return apiCall<ProfessionDto[]>('/professions', {
+          method: 'GET',
+        })
+      }
     },
 
     // Profile endpoints
     profile: {
       async getProfile(): Promise<ApiResponse<any>> {
-        return authenticatedApiCall<any>('/auth/profile')
+        return authenticatedApiCall<any>('/auth/profile', {
+          method: 'GET',
+        })
       },
 
       async updateProfile(data: UpdateProfileRequest): Promise<ApiResponse<string>> {
@@ -452,10 +517,6 @@ export const useApi = () => {
 
       async getPermissions(): Promise<ApiResponse<string[]>> {
         return authenticatedApiCall<string[]>('/auth/permissions')
-      },
-
-      async getProfessions(): Promise<ApiResponse<ProfessionDto[]>> {
-        return apiCall<ProfessionDto[]>('/professions')
       },
     },
   }

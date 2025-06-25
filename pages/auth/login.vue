@@ -156,7 +156,7 @@ const isFormValid = computed(() => {
 onMounted(() => {
   const remembered = getRememberedCredentials()
   if (remembered.rememberMe) {
-    form.tcknOrMemberNumber = remembered.tckn
+    form.tcknOrMemberNumber = remembered.tcknOrMemberNumber
     form.password = remembered.password
     form.rememberMe = remembered.rememberMe
   }
@@ -193,7 +193,7 @@ const handleLogin = async () => {
   }
 
   const result = await login({
-    tckn: form.tcknOrMemberNumber,
+    tcknOrMemberNumber: form.tcknOrMemberNumber,
     password: form.password,
     rememberMe: form.rememberMe
   })

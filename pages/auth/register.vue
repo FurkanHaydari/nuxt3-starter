@@ -133,15 +133,15 @@
                 <div class="mb-3">
                   <label for="password" class="form-label">Şifre <span class="text-danger">*</span></label>
                   <div class="input-group">
-                    <input 
+                  <input 
                       :type="showPassword ? 'text' : 'password'" 
-                      class="form-control" 
-                      id="password" 
-                      v-model="registrationForm.password"
-                      :class="{ 'is-invalid': errors.password && hasInteracted.password }"
-                      @blur="hasInteracted.password = true"
+                    class="form-control" 
+                    id="password" 
+                    v-model="registrationForm.password"
+                    :class="{ 'is-invalid': errors.password && hasInteracted.password }"
+                    @blur="hasInteracted.password = true"
                       placeholder="En az 8 karakter, büyük/küçük harf, rakam ve özel karakter"
-                      required>
+                    required>
                     <button 
                       type="button" 
                       class="btn btn-outline-secondary"
@@ -156,15 +156,15 @@
                 <div class="mb-3">
                   <label for="confirmPassword" class="form-label">Şifre Tekrar <span class="text-danger">*</span></label>
                   <div class="input-group">
-                    <input 
+                  <input 
                       :type="showConfirmPassword ? 'text' : 'password'" 
-                      class="form-control" 
-                      id="confirmPassword" 
-                      v-model="registrationForm.confirmPassword"
-                      :class="{ 'is-invalid': errors.confirmPassword && hasInteracted.confirmPassword }"
-                      @blur="hasInteracted.confirmPassword = true"
+                    class="form-control" 
+                    id="confirmPassword" 
+                    v-model="registrationForm.confirmPassword"
+                    :class="{ 'is-invalid': errors.confirmPassword && hasInteracted.confirmPassword }"
+                    @blur="hasInteracted.confirmPassword = true"
                       placeholder="Şifrenizi tekrar girin"
-                      required>
+                    required>
                     <button 
                       type="button" 
                       class="btn btn-outline-secondary"

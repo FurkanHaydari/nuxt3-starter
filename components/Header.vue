@@ -77,24 +77,46 @@
           <div class="d-none d-lg-flex align-items-center">
             <!-- Logged In User -->
             <div v-if="authenticated" class="d-flex align-items-center gap-3">
-              <span class="text-light">
-                <i class="bi bi-person-circle me-1"></i>
-                Hoş geldiniz
-                <template v-if="user?.firstName || user?.lastName">
-                  <strong>{{ user?.firstName }} {{ user?.lastName }}</strong>
-                </template>
-                <template v-else-if="user?.username">
-                  <strong>{{ user?.username }}</strong>
-                </template>
-                !
-                <!-- Debug -->
-                <small v-if="$dev" class="d-block">
-                  Debug: {{ JSON.stringify({ firstName: user?.firstName, lastName: user?.lastName, username: user?.username }) }}
-                </small>
+              <!-- User Dropdown -->
+              <div class="dropdown">
+                <button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center" 
+                        type="button" 
+                        id="userDropdown" 
+                        data-bs-toggle="dropdown" 
+                        aria-expanded="false">
+                  <i class="bi bi-person-circle me-2"></i>
+                  <span v-if="user?.firstName || user?.lastName">
+                    {{ user?.firstName }} {{ user?.lastName }}
+                  </span>
+                  <span v-else-if="user?.username">
+                    {{ user?.username }}
               </span>
-              <button @click="handleLogout" class="btn btn-outline-light btn-sm">
-                <i class="bi bi-box-arrow-right me-1"></i>Çıkış
+                  <span v-else>Kullanıcı</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                  <li>
+                    <h6 class="dropdown-header">
+                      <i class="bi bi-person-circle me-2"></i>Hesabım
+                    </h6>
+                  </li>
+                  <li>
+                    <NuxtLink to="/profile" class="dropdown-item">
+                      <i class="bi bi-person me-2"></i>Profil Bilgileri
+                    </NuxtLink>
+                  </li>
+                  <li>
+                    <NuxtLink to="/auth/change-password" class="dropdown-item">
+                      <i class="bi bi-key me-2"></i>Şifre Değiştir
+                    </NuxtLink>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <button @click="handleLogout" class="dropdown-item text-danger">
+                      <i class="bi bi-box-arrow-right me-2"></i>Çıkış Yap
               </button>
+                  </li>
+                </ul>
+              </div>
             </div>
             
             <!-- Login Form -->
@@ -173,20 +195,46 @@
           <!-- Mobil Login Butonlar -->
           <div class="d-lg-none mt-3">
             <div v-if="authenticated" class="text-center">
-              <span class="text-light d-block mb-2">
-                <i class="bi bi-person-circle me-1"></i>
-                Hoş geldiniz
-                <template v-if="user?.firstName || user?.lastName">
-                  <strong>{{ user?.firstName }} {{ user?.lastName }}</strong>
-                </template>
-                <template v-else-if="user?.username">
-                  <strong>{{ user?.username }}</strong>
-                </template>
-                !
+              <!-- Mobile User Dropdown -->
+              <div class="dropdown">
+                <button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center mx-auto" 
+                        type="button" 
+                        id="mobileUserDropdown" 
+                        data-bs-toggle="dropdown" 
+                        aria-expanded="false">
+                  <i class="bi bi-person-circle me-2"></i>
+                  <span v-if="user?.firstName || user?.lastName">
+                    {{ user?.firstName }} {{ user?.lastName }}
+                  </span>
+                  <span v-else-if="user?.username">
+                    {{ user?.username }}
               </span>
-              <button @click="handleLogout" class="btn btn-outline-light btn-sm">
-                <i class="bi bi-box-arrow-right me-1"></i>Çıkış
+                  <span v-else>Kullanıcı</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-center w-100" aria-labelledby="mobileUserDropdown">
+                  <li>
+                    <h6 class="dropdown-header">
+                      <i class="bi bi-person-circle me-2"></i>Hesabım
+                    </h6>
+                  </li>
+                  <li>
+                    <NuxtLink to="/profile" class="dropdown-item">
+                      <i class="bi bi-person me-2"></i>Profil Bilgileri
+                    </NuxtLink>
+                  </li>
+                  <li>
+                    <NuxtLink to="/auth/change-password" class="dropdown-item">
+                      <i class="bi bi-key me-2"></i>Şifre Değiştir
+                    </NuxtLink>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <button @click="handleLogout" class="dropdown-item text-danger">
+                      <i class="bi bi-box-arrow-right me-2"></i>Çıkış Yap
               </button>
+                  </li>
+                </ul>
+              </div>
             </div>
             <div v-else class="d-flex gap-2">
               <NuxtLink to="/auth/login" class="btn btn-accent btn-sm" style="flex: 1;">
@@ -244,7 +292,7 @@ const isHeaderFormValid = computed(() => {
 onMounted(() => {
   const remembered = getRememberedCredentials()
   if (remembered.rememberMe) {
-    loginForm.tcknOrMemberNumber = remembered.tckn
+    loginForm.tcknOrMemberNumber = remembered.tcknOrMemberNumber
     loginForm.password = remembered.password
     loginForm.rememberMe = remembered.rememberMe
   }
@@ -281,7 +329,7 @@ const handleLogin = async () => {
   }
 
   const result = await login({
-    tckn: loginForm.tcknOrMemberNumber,
+    tcknOrMemberNumber: loginForm.tcknOrMemberNumber,
     password: loginForm.password,
     rememberMe: loginForm.rememberMe
   })

@@ -23,7 +23,7 @@ const {
 } = useSportsData()
 
 // Auth state
-const { authenticated } = useAuth()
+const { authenticated, user } = useAuth()
 
 // Inject selected sport from layout  
 const selectedSport = inject('selectedSport', ref('futbol')) as Ref<string>
@@ -166,19 +166,43 @@ onUnmounted(() => {
 <template>
   <div class="homepage">
     <!-- Hero Bölümü -->
-    <section class="hero-section bg-gradient-primary text-white py-5">
+    <section class="hero-section bg-gradient-primary text-white" :class="authenticated ? 'py-3' : 'py-5'">
       <div class="container">
-        <div class="row align-items-center min-vh-50">
+        <div class="row align-items-center" :class="authenticated ? '' : 'min-vh-50'">
           <div class="col-lg-6">
-            <h1 class="display-4 fw-bold mb-4">
-              Spor Bahislerinde 
-              <span class="text-warning">Yeni Çağ</span>
-            </h1>
-            <p class="lead mb-4">
-              En popüler spor karşılaşmalarına bahis yapın, canlı maçları takip edin ve kazancınızı artırın. 
-              Güvenli ve hızlı ödeme seçenekleri ile hemen başlayın!
-            </p>
-            <div class="d-flex gap-3 flex-wrap">
+            <!-- Authenticated User Welcome -->
+            <div v-if="authenticated && user" class="welcome-user mb-4">
+              <div class="alert alert-success border-0 shadow-sm">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-person-circle fs-3 text-success me-3"></i>
+                  <div>
+                    <h5 class="alert-heading mb-1">
+                      Hoşgeldin, {{ user.firstName }} {{ user.lastName }}!
+                    </h5>
+                    <p class="mb-0 small">
+                      <i class="bi bi-envelope me-1"></i>{{ user.email }}
+                      <span class="mx-2">•</span>
+                      <i class="bi bi-telephone me-1"></i>{{ user.phoneNumber }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Main Hero Content - Show only for non-authenticated users -->
+            <template v-if="!authenticated">
+              <h1 class="display-4 fw-bold mb-4">
+                Spor Bahislerinde 
+                <span class="text-warning">Yeni Çağ</span>
+              </h1>
+              <p class="lead mb-4">
+                En popüler spor karşılaşmalarına bahis yapın, canlı maçları takip edin ve kazancınızı artırın. 
+                Güvenli ve hızlı ödeme seçenekleri ile hemen başlayın!
+              </p>
+            </template>
+            
+            <!-- CTA Buttons - Show only if not authenticated -->
+            <div v-if="!authenticated" class="d-flex gap-3 flex-wrap">
               <NuxtLink to="/auth/register" class="btn btn-accent btn-lg px-4 fw-semibold">
                 <i class="bi bi-person-plus me-2"></i>
                 Hemen Üye Ol
@@ -188,12 +212,26 @@ onUnmounted(() => {
                 Giriş Yap
               </NuxtLink>
             </div>
-          </div>
-                      <div class="col-lg-6 text-center">
-              <div class="hero-illustration">
-                <i class="bi bi-trophy hero-trophy" style="font-size: 8rem; opacity: 0.8;"></i>
-              </div>
+            
+            <!-- Authenticated User Actions -->
+            <div v-else class="d-flex gap-3 flex-wrap">
+              <NuxtLink to="/profile" class="btn btn-warning btn-lg px-4 fw-semibold">
+                <i class="bi bi-person-gear me-2"></i>
+                Profilim
+              </NuxtLink>
+              <button class="btn btn-outline-light btn-lg px-4">
+                <i class="bi bi-wallet2 me-2"></i>
+                Cüzdan
+              </button>
             </div>
+          </div>
+          
+          <!-- Hero Illustration - Show only for non-authenticated users -->
+          <div v-if="!authenticated" class="col-lg-6 text-center">
+            <div class="hero-illustration">
+              <i class="bi bi-trophy hero-trophy" style="font-size: 8rem; opacity: 0.8;"></i>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -205,9 +243,9 @@ onUnmounted(() => {
           <div class="col-12 text-center">
             <h2 class="fw-bold mb-3">
               <i class="bi bi-broadcast text-danger me-2"></i>
-              {{ selectedSport.value !== 'futbol' ? selectedSportInfo.name + ' - ' : '' }}Canlı Maçlar
+              {{ selectedSport !== 'futbol' ? selectedSportInfo.name + ' - ' : '' }}Canlı Maçlar
             </h2>
-            <p class="text-muted">{{ selectedSport.value !== 'futbol' ? selectedSportInfo.name + ' kategorisinde' : '' }} şu anda devam eden heyecanlı karşılaşmalar</p>
+            <p class="text-muted">{{ selectedSport !== 'futbol' ? selectedSportInfo.name + ' kategorisinde' : '' }} şu anda devam eden heyecanlı karşılaşmalar</p>
           </div>
         </div>
         

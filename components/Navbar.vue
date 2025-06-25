@@ -32,13 +32,13 @@
           <template v-if="authenticated">
             <li class="nav-item dropdown">
               <a href="javascript:void(0)" class="btn btn-link nav-link py-2 px-0 px-lg-2 dropdown-toggle" id="auth-dropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-display="static">
-                Mr Admin
+                {{ user?.firstName || user?.username || 'Kullanıcı' }}
               </a>
               <ul class="dropdown-menu dropdown-menu-md-end border-0 shadow-lg rounded-0" aria-labelledby="auth-dropdown">
-                <li><NuxtLink :to="{name: 'admin'}" class="dropdown-item">Dashboard</NuxtLink></li>
+                <li><NuxtLink to="/profile" class="dropdown-item">Profilim</NuxtLink></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                  <NuxtLink class="dropdown-item" @click="logout">Logout</NuxtLink>
+                  <a href="javascript:void(0)" class="dropdown-item" @click="logout">Çıkış</a>
                 </li>
               </ul>
             </li>
@@ -55,11 +55,19 @@ import { useAuthStore } from '~/store/auth'; // import the auth store we just cr
 
 const router = useRouter();
 
-const { logUserOut } = useAuthStore(); // use authenticateUser action from  auth store
-const { authenticated } = storeToRefs(useAuthStore()); // make authenticated state reactive with storeToRefs
+const { clearAuth } = useAuthStore(); // use clearAuth action from auth store
+const { authenticated, user } = storeToRefs(useAuthStore()); // make authenticated state reactive with storeToRefs
 
 const logout = () => {
-  logUserOut();
+  // Clear auth token cookie
+  const config = useRuntimeConfig();
+  const tokenCookie = useCookie(config.public.tokenCookieName as string);
+  tokenCookie.value = null;
+  
+  // Clear auth state
+  clearAuth();
+  
+  // Redirect to login
   router.push('/auth/login');
 };
 

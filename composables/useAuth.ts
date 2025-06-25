@@ -1,7 +1,7 @@
 import { useAuthStore } from '~/store/auth'
 
 interface LoginCredentials {
-  tckn: string
+  tcknOrMemberNumber: string
   password: string
   rememberMe?: boolean
 }
@@ -37,29 +37,21 @@ interface VerifyRegistrationData {
   otpCode: string
 }
 
-// TCKN validation function
-const validateTckn = (tckn: string): { isValid: boolean; error?: string } => {
-  if (!tckn || tckn.trim() === '') {
+// TCKN or Member Number validation function
+const validateTckn = (input: string): { isValid: boolean; error?: string } => {
+  if (!input || input.trim() === '') {
     return { isValid: false, error: 'TC Kimlik No / Üye No girilmesi zorunludur.' }
   }
 
-  if (tckn.length < 11) {
-    return { isValid: false, error: 'TC Kimlik No alanına en az 11 karakter girilmelidir.' }
-  }
-
-  if (tckn.length === 11) {
-    // TCKN algorithm validation
-    if (!/^\d{11}$/.test(tckn)) {
-      return { isValid: false, error: 'TC Kimlik numaranızı tekrar kontrol edin.' }
-    }
-
+  // TC Kimlik numarası kontrolü (11 haneli)
+  if (input.length === 11 && /^\d{11}$/.test(input)) {
     // First digit cannot be 0
-    if (tckn[0] === '0') {
+    if (input[0] === '0') {
       return { isValid: false, error: 'TC Kimlik numaranızı tekrar kontrol edin.' }
     }
 
     // TCKN algorithm
-    const digits = tckn.split('').map(Number)
+    const digits = input.split('').map(Number)
     const odd = digits[0] + digits[2] + digits[4] + digits[6] + digits[8]
     const even = digits[1] + digits[3] + digits[5] + digits[7]
     const digit10 = ((odd * 7) - even) % 10
@@ -67,10 +59,22 @@ const validateTckn = (tckn: string): { isValid: boolean; error?: string } => {
 
     if (digit10 !== digits[9] || digit11 !== digits[10]) {
       return { isValid: false, error: 'TC Kimlik numaranızı tekrar kontrol edin.' }
-    }
   }
 
   return { isValid: true }
+  }
+  
+  // Üye numarası kontrolü (alfanumerik, 6-20 karakter)
+  if (input.length >= 6 && input.length <= 20) {
+    if (!/^[a-zA-Z0-9]+$/.test(input)) {
+      return { isValid: false, error: 'Üye numarası sadece harf ve rakam içerebilir.' }
+    }
+    
+    return { isValid: true }
+  }
+
+  // Ne TCKN ne de geçerli member number
+  return { isValid: false, error: 'Geçerli bir TC kimlik numarası (11 haneli) veya üye numarası (6-20 karakter) giriniz.' }
 }
 
 // Password validation function (for login - basic validation)
@@ -119,9 +123,9 @@ const validateStrongPassword = (password: string): { isValid: boolean; error?: s
 const useRememberMe = () => {
   const config = useRuntimeConfig()
   
-  const saveCredentials = (tckn: string, password: string) => {
+  const saveCredentials = (tcknOrMemberNumber: string, password: string) => {
     if (process.client) {
-      localStorage.setItem('rememberedTckn', tckn)
+      localStorage.setItem('rememberedTcknOrMemberNumber', tcknOrMemberNumber)
       localStorage.setItem('rememberedPassword', password)
       localStorage.setItem('rememberMe', 'true')
     }
@@ -132,20 +136,24 @@ const useRememberMe = () => {
       const rememberMe = localStorage.getItem('rememberMe') === 'true'
       if (rememberMe) {
         return {
-          tckn: localStorage.getItem('rememberedTckn') || '',
+          tcknOrMemberNumber: localStorage.getItem('rememberedTcknOrMemberNumber') || '',
           password: localStorage.getItem('rememberedPassword') || '',
           rememberMe: true
         }
       }
     }
-    return { tckn: '', password: '', rememberMe: false }
+    return { tcknOrMemberNumber: '', password: '', rememberMe: false }
   }
 
   const clearRememberedCredentials = () => {
     if (process.client) {
-      localStorage.removeItem('rememberedTckn')
+      // Clear new keys
+      localStorage.removeItem('rememberedTcknOrMemberNumber')
       localStorage.removeItem('rememberedPassword')
       localStorage.removeItem('rememberMe')
+      
+      // Also clear old keys for backward compatibility
+      localStorage.removeItem('rememberedTckn')
     }
   }
 
@@ -189,7 +197,7 @@ export const useAuth = () => {
 
   // Client-side validation
   const validateLoginForm = (credentials: LoginCredentials) => {
-    const tcknValidation = validateTckn(credentials.tckn)
+    const tcknValidation = validateTckn(credentials.tcknOrMemberNumber)
     if (!tcknValidation.isValid) {
       return { isValid: false, error: tcknValidation.error }
     }
@@ -218,7 +226,7 @@ export const useAuth = () => {
       // Call API
       const api = useApi()
       const response = await api.auth.login({
-        tcknOrMemberNumber: credentials.tckn,
+        tcknOrMemberNumber: credentials.tcknOrMemberNumber,
         password: credentials.password
       })
 
@@ -232,7 +240,7 @@ export const useAuth = () => {
 
         // Handle remember me
         if (credentials.rememberMe) {
-          saveCredentials(credentials.tckn, credentials.password)
+          saveCredentials(credentials.tcknOrMemberNumber, credentials.password)
         } else {
           clearRememberedCredentials()
         }
@@ -389,7 +397,10 @@ export const useAuth = () => {
 
     try {
       const api = useApi()
-      const response = await api.auth.forgotPassword(data)
+      const response = await api.auth.forgotPassword({
+        tcknOrMemberNumber: data.tckn,
+        birthDate: data.birthDate
+      })
 
       if (response.isSuccess) {
         return { success: true, data: response.data }
@@ -414,7 +425,11 @@ export const useAuth = () => {
 
     try {
       const api = useApi()
-      const response = await api.auth.selectResetMethod(data)
+      const response = await api.auth.selectResetMethod({
+        tcknOrMemberNumber: data.tckn,
+        birthDate: data.birthDate,
+        method: data.method
+      })
 
       if (response.isSuccess) {
         return { success: true, message: response.data || 'Şifre sıfırlama bağlantısı gönderildi' }
@@ -433,12 +448,39 @@ export const useAuth = () => {
   }
 
   // Check authentication status
-  const checkAuth = () => {
+  const checkAuth = async () => {
     const tokenCookie = useCookie(config.public.tokenCookieName as string)
     
     if (tokenCookie.value) {
       authStore.setAuthenticated(true)
-      // Optionally fetch user profile
+      
+      // If user data is not in store, fetch from API
+      if (!authStore.currentUser) {
+        try {
+          const api = useApi()
+          const response = await api.profile.getProfile()
+          
+          if (response.isSuccess && response.data) {
+            authStore.setUser({
+              id: response.data.id,
+              email: response.data.email,
+              username: response.data.username,
+              firstName: response.data.firstName,
+              lastName: response.data.lastName,
+              phoneNumber: response.data.phoneNumber,
+              profession: response.data.profession,
+              isEmailVerified: response.data.isEmailVerified,
+              isPhoneVerified: true, // Always true after registration
+              status: response.data.isActive ? 'ACTIVE' : 'INACTIVE',
+              role: response.data.roles?.[0] || 'user'
+            })
+          }
+        } catch (error) {
+          console.error('Failed to fetch user profile:', error)
+          // If profile fetch fails but token exists, keep authenticated but without user data
+        }
+      }
+      
       return true
     } else {
       authStore.setAuthenticated(false)
@@ -461,6 +503,7 @@ export const useAuth = () => {
     // State (computed refs from store)
     user: computed(() => authStore.currentUser),
     authenticated: computed(() => authStore.isAuthenticated),
+    isAuthenticated: computed(() => authStore.isAuthenticated),
     loading: computed(() => authStore.isLoading),
     error: computed(() => authStore.errorMessage),
     hasError: computed(() => authStore.hasError),
