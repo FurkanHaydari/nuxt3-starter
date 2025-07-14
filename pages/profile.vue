@@ -373,13 +373,30 @@ const handleSubmit = async () => {
     const updateData: any = {}
     
     if (form.username !== originalValues.username) {
-      updateData.username = form.username
+      updateData.Username = form.username
     }
     
     if (form.professionId !== originalValues.professionId) {
-      updateData.profession = form.professionId
+      const professionIdNum = parseInt(form.professionId.toString())
+      
+      if (!isNaN(professionIdNum) && professionIdNum > 0) {
+        updateData.Profession = professionIdNum.toString()
+      } else {
+        console.error('Invalid profession ID:', form.professionId)
+        errorMessage.value = 'Geçersiz meslek seçimi.'
+        loading.value = false
+        return
+      }
     }
     
+    // Check if updateData is empty
+    if (Object.keys(updateData).length === 0) {
+      console.error('No data to update - updateData is empty!')
+      errorMessage.value = 'Güncellenecek veri bulunamadı.'
+      loading.value = false
+      return
+    }
+ 
     const response = await api.profile.updateProfile(updateData)
 
     if (response.isSuccess) {

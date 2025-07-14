@@ -126,8 +126,8 @@ interface ChangePasswordRequest {
 }
 
 interface UpdateProfileRequest {
-  username?: string
-  profession?: string
+  Username?: string
+  Profession?: string
 }
 
 interface UpdateEmailRequest {
@@ -252,12 +252,15 @@ export const useApi = () => {
       return transformBackendResponse(rawResponse._data!, mapper, rawResponse.status)
     } catch (error: any) {
       console.error('API Error:', error)
+      console.error('Error data:', error?.data)
+      console.error('Error response:', error?.response)
       
       // Handle different error response formats
       let errorMessage = 'An unexpected error occurred'
       
       if (error?.data) {
         // Backend returned structured error response
+        console.log('Processing error.data:', error.data)
         
         // Handle ASP.NET Core ProblemDetails format first
         if (error.data.detail) {
@@ -271,6 +274,7 @@ export const useApi = () => {
           errorMessage = error.data.error
         } else if (error.data.errors) {
           // Handle ASP.NET Core validation errors format
+          console.log('Processing validation errors:', error.data.errors)
           if (Array.isArray(error.data.errors)) {
             // Format: ["Error 1", "Error 2"] or from ProblemDetails.Extensions["errors"]
             errorMessage = error.data.errors.join(', ')
@@ -279,12 +283,12 @@ export const useApi = () => {
             const errorMessages = []
             for (const [field, messages] of Object.entries(error.data.errors)) {
               if (Array.isArray(messages)) {
-                errorMessages.push(...messages)
+                errorMessages.push(`${field}: ${messages.join(', ')}`)
               } else {
-                errorMessages.push(messages as string)
+                errorMessages.push(`${field}: ${messages}`)
               }
             }
-            errorMessage = errorMessages.join(', ')
+            errorMessage = errorMessages.join('; ')
           }
         } else if (typeof error.data === 'string') {
           errorMessage = error.data
@@ -292,6 +296,7 @@ export const useApi = () => {
         
       } else if (error?.response?.data) {
         // Alternative error response format
+        console.log('Processing error.response.data:', error.response.data)
         if (error.response.data.detail) {
           errorMessage = error.response.data.detail
         } else if (error.response.data.message) {
