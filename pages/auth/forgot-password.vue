@@ -8,18 +8,6 @@
               <h2 class="h4 fw-bold">Şifremi Unuttum</h2>
               <p class="text-muted">{{ currentStepDescription }}</p>
             </div>
-            
-            <!-- Error Alert -->
-            <div v-if="errorMessage" class="alert alert-danger" role="alert">
-              <i class="bi bi-exclamation-triangle me-2"></i>
-              {{ errorMessage }}
-            </div>
-
-            <!-- Success Alert -->
-            <div v-if="successMessage" class="alert alert-success" role="alert">
-              <i class="bi bi-check-circle me-2"></i>
-              {{ successMessage }}
-            </div>
 
             <!-- Step 1: TC Kimlik No/Üye No + Doğum Tarihi -->
             <form v-if="currentStep === 1" @submit.prevent="handleStep1Submit">
@@ -29,14 +17,14 @@
                   v-model="step1Form.tcknOrMemberNumber"
                   type="text" 
                   class="form-control" 
-                  :class="{ 'is-invalid': tcknError }"
+                  :class="{ 'is-invalid': tcknError && hasInteracted.tckn }"
                   id="tcknOrMemberNumber" 
                   placeholder="TC Kimlik No veya Üye No"
                   :disabled="loading"
                   @input="validateTcknOrMemberNumberField"
-                  @blur="validateTcknOrMemberNumberField"
+                  @blur="hasInteracted.tckn = true; validateTcknOrMemberNumberField()"
                   required>
-                <div v-if="tcknError" class="invalid-feedback">
+                <div v-if="tcknError && hasInteracted.tckn" class="invalid-feedback">
                   {{ tcknError }}
                 </div>
               </div>
@@ -47,15 +35,15 @@
                   v-model="step1Form.birthDate"
                   type="date" 
                   class="form-control" 
-                  :class="{ 'is-invalid': birthDateError }"
+                  :class="{ 'is-invalid': birthDateError && hasInteracted.birthDate }"
                   id="birthDate"
                   :disabled="loading"
                   :max="maxBirthDate"
                   :min="minBirthDate"
                   @input="validateBirthDateField"
-                  @blur="validateBirthDateField"
+                  @blur="hasInteracted.birthDate = true; validateBirthDateField()"
                   required>
-                <div v-if="birthDateError" class="invalid-feedback">
+                <div v-if="birthDateError && hasInteracted.birthDate" class="invalid-feedback">
                   {{ birthDateError }}
                 </div>
               </div>
@@ -169,6 +157,29 @@
       </div>
     </div>
   </div>
+
+  <!-- Error Modal -->
+  <ErrorModal 
+    :show="showErrorModal"
+    :title="errorModal.title"
+    :message="errorModal.message"
+    :details="errorModal.details"
+    :show-retry="errorModal.showRetry"
+    @close="closeErrorModal"
+    @retry="retryLastAction"
+  />
+
+  <!-- Success Modal -->
+  <SuccessModal 
+    :show="showSuccessModal"
+    :title="successModal.title"
+    :message="successModal.message"
+    :details="successModal.details"
+    :show-action="successModal.showAction"
+    :action-text="successModal.actionText"
+    @close="closeSuccessModal"
+    @action="successAction"
+  />
 </template>
 
 <script setup lang="ts">
@@ -195,6 +206,12 @@ const step2Form = reactive({
   method: '' // 'email' or 'sms'
 })
 
+// Interaction tracking for validation
+const hasInteracted = reactive({
+  tckn: false,
+  birthDate: false
+})
+
 // Contact info from step 1 response
 const contactInfo = reactive({
   maskedEmail: '',
@@ -205,13 +222,30 @@ const contactInfo = reactive({
 
 // State
 const loading = ref(false)
-const errorMessage = ref('')
-const successMessage = ref('')
 const finalMessage = ref('')
 
 // Validation errors
 const tcknError = ref('')
 const birthDateError = ref('')
+
+// Error/Success Modals
+const showErrorModal = ref(false)
+const errorModal = reactive({
+  title: 'Bir Hata Oluştu',
+  message: '',
+  details: [] as string[],
+  showRetry: false
+})
+let lastAction: (() => Promise<void>) | null = null
+
+const showSuccessModal = ref(false)
+const successModal = reactive({
+  title: '',
+  message: '',
+  details: [] as string[],
+  showAction: false,
+  actionText: ''
+})
 
 // Date constraints for birth date (18+ years old)
 const today = new Date()
@@ -288,18 +322,21 @@ const validateBirthDateField = () => {
 
 // Step handlers
 const handleStep1Submit = async () => {
-  errorMessage.value = ''
-  successMessage.value = ''
+  // Mark all fields as interacted for validation
+  hasInteracted.tckn = true
+  hasInteracted.birthDate = true
   
   // Final validation
   validateTcknOrMemberNumberField()
   validateBirthDateField()
   
   if (!isStep1Valid.value) {
+    // Frontend validation errors are already shown under fields
     return
   }
 
   loading.value = true
+  lastAction = handleStep1Submit
 
   try {
     const api = useApi()
@@ -320,27 +357,40 @@ const handleStep1Submit = async () => {
         currentStep.value = 2
       } else {
         // Backend'de doğrulama başarısız
-        errorMessage.value = response.data.message || 'Bilgiler kontrol edilirken hata oluştu'
+        showError(
+          response.data.message || 'Bilgiler kontrol edilirken hata oluştu',
+          'Doğrulama Hatası',
+          undefined,
+          true // Show retry button
+        )
       }
     } else {
-      errorMessage.value = response.error || 'Bilgiler kontrol edilirken hata oluştu'
+      showError(
+        response.error || 'Bilgiler kontrol edilirken hata oluştu',
+        'Doğrulama Hatası',
+        undefined,
+        true // Show retry button
+      )
     }
   } catch (error: any) {
-    errorMessage.value = error?.message || 'Beklenmeyen bir hata oluştu'
+    showError(
+      error?.message || 'Beklenmeyen bir hata oluştu',
+      'Doğrulama Hatası',
+      undefined,
+      true // Show retry button
+    )
   } finally {
     loading.value = false
   }
 }
 
 const handleStep2Submit = async () => {
-  errorMessage.value = ''
-  successMessage.value = ''
-  
   if (!step2Form.method) {
     return
   }
 
   loading.value = true
+  lastAction = handleStep2Submit
 
   try {
     const api = useApi()
@@ -353,11 +403,26 @@ const handleStep2Submit = async () => {
     if (response.isSuccess) {
       finalMessage.value = response.data || 'Şifre sıfırlama bağlantısı gönderilmiştir.'
       currentStep.value = 3
+      showSuccess(
+        'Şifre sıfırlama linki başarıyla gönderildi',
+        'İşlem Başarılı',
+        [finalMessage.value]
+      )
     } else {
-      errorMessage.value = response.error || 'Şifre sıfırlama linki gönderilirken hata oluştu'
+      showError(
+        response.error || 'Şifre sıfırlama linki gönderilirken hata oluştu',
+        'Gönderim Hatası',
+        undefined,
+        true // Show retry button
+      )
     }
   } catch (error: any) {
-    errorMessage.value = error?.message || 'Beklenmeyen bir hata oluştu'
+    showError(
+      error?.message || 'Beklenmeyen bir hata oluştu',
+      'Gönderim Hatası',
+      undefined,
+      true // Show retry button
+    )
   } finally {
     loading.value = false
   }
@@ -366,8 +431,6 @@ const handleStep2Submit = async () => {
 // Navigation functions
 const goBackToStep1 = () => {
   currentStep.value = 1
-  errorMessage.value = ''
-  successMessage.value = ''
 }
 
 const resetToStep1 = () => {
@@ -375,16 +438,57 @@ const resetToStep1 = () => {
   step1Form.tcknOrMemberNumber = ''
   step1Form.birthDate = ''
   step2Form.method = ''
-  errorMessage.value = ''
-  successMessage.value = ''
   finalMessage.value = ''
   tcknError.value = ''
   birthDateError.value = ''
+  hasInteracted.tckn = false
+  hasInteracted.birthDate = false
   
   // Reset contact info
   contactInfo.maskedEmail = ''
   contactInfo.maskedPhone = ''
   contactInfo.hasEmail = false
   contactInfo.hasPhone = false
+}
+
+// Modal functions
+const showError = (message: string, title?: string, details?: string[], showRetry: boolean = false) => {
+  errorModal.title = title || 'Bir Hata Oluştu'
+  errorModal.message = message
+  errorModal.details = details || []
+  errorModal.showRetry = showRetry
+  showErrorModal.value = true
+}
+
+const closeErrorModal = () => {
+  showErrorModal.value = false
+  errorModal.details = []
+  errorModal.showRetry = false
+}
+
+const retryLastAction = async () => {
+  if (lastAction) {
+    closeErrorModal()
+    await lastAction()
+  }
+}
+
+const showSuccess = (message: string, title?: string, details?: string[], showAction: boolean = false, actionText: string = '') => {
+  successModal.title = title || 'Başarılı'
+  successModal.message = message
+  successModal.details = details || []
+  successModal.showAction = showAction
+  successModal.actionText = actionText
+  showSuccessModal.value = true
+}
+
+const closeSuccessModal = () => {
+  showSuccessModal.value = false
+  successModal.details = []
+  successModal.showAction = false
+}
+
+const successAction = () => {
+  closeSuccessModal()
 }
 </script> 

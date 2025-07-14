@@ -137,26 +137,14 @@
 
                   <!-- Profession -->
                   <div class="col-md-6">
-                    <label for="profession" class="form-label">Meslek</label>
-                    <select 
+                    <FormProfessionField
                       v-model="form.professionId"
-                      class="form-select" 
-                      :class="{ 'is-invalid': professionError }"
-                      id="profession" 
-                      :disabled="loading"
-                      @change="validateProfessionField"
-                      @blur="validateProfessionField">
-                      <option value="">Meslek seçiniz</option>
-                      <option 
-                        v-for="profession in professions" 
-                        :key="profession.id" 
-                        :value="profession.id">
-                        {{ profession.name }}
-                      </option>
-                    </select>
-                    <div v-if="professionError" class="invalid-feedback">
-                      {{ professionError }}
-                    </div>
+                      field-id="profession"
+                      :required="false"
+                      variant="select"
+                      :frontend-error="professionError"
+                      @blur="validateProfessionField"
+                      @selection-changed="onProfessionSelectionChanged" />
                   </div>
                 </div>
 
@@ -234,7 +222,6 @@ useHead({
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-const professions = ref<any[]>([])
 const profileData = ref<any>(null)
 
 // Form data
@@ -287,6 +274,12 @@ const validateProfessionField = () => {
   professionError.value = ''
 }
 
+// Handle profession selection from component
+const onProfessionSelectionChanged = (profession: {id: number, name: string} | null) => {
+  // Clear any profession-related errors when a valid selection is made
+  professionError.value = ''
+}
+
 // Helper functions
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) return '-'
@@ -306,24 +299,11 @@ const formatDate = (dateString: string | undefined) => {
 const resetForm = () => {
   form.username = originalValues.username
   form.professionId = originalValues.professionId
+  
   usernameError.value = ''
   professionError.value = ''
   errorMessage.value = ''
   successMessage.value = ''
-}
-
-// Load professions
-const loadProfessions = async () => {
-  try {
-    const api = useApi()
-    const response = await api.profession.getProfessions()
-    
-    if (response.isSuccess && response.data) {
-      professions.value = response.data
-    }
-  } catch (error) {
-    console.error('Failed to load professions:', error)
-  }
 }
 
 // Load user profile
@@ -430,10 +410,7 @@ onMounted(async () => {
     return
   }
   
-  await Promise.all([
-    loadProfessions(),
-    loadProfile()
-  ])
+  await loadProfile()
 })
 </script>
 

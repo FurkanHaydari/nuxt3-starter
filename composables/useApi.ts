@@ -24,6 +24,7 @@ interface ApiResponse<T = any> {
   data?: T
   message?: string
   error?: string
+  statusCode?: number
 }
 
 interface LoginRequest {
@@ -218,13 +219,15 @@ export const useApi = () => {
 
   const transformBackendResponse = <TBackend, TFrontend>(
     response: BackendApiResponse<TBackend>,
-    mapper?: (data: TBackend) => TFrontend
+    mapper?: (data: TBackend) => TFrontend,
+    statusCode?: number
   ): ApiResponse<TFrontend> => {
     return {
       isSuccess: response.success,
       data: response.data && mapper ? mapper(response.data) : (response.data as unknown as TFrontend),
       message: response.message,
-      error: response.errors ? response.errors.join(', ') : response.message
+      error: response.errors ? response.errors.join(', ') : response.message,
+      statusCode: statusCode || 200
     }
   }
 
@@ -235,7 +238,8 @@ export const useApi = () => {
     mapper?: (data: TBackend) => TFrontend
   ): Promise<ApiResponse<TFrontend>> => {
     try {
-      const response = await $fetch<BackendApiResponse<TBackend>>(endpoint, {
+      // Use $fetch.raw to get both response and status
+      const rawResponse = await $fetch.raw<BackendApiResponse<TBackend>>(endpoint, {
         baseURL: config.public.apiBaseUrl as string,
         timeout: config.public.apiTimeout as number,
         headers: {
@@ -245,7 +249,7 @@ export const useApi = () => {
         ...options,
       })
 
-      return transformBackendResponse(response, mapper)
+      return transformBackendResponse(rawResponse._data!, mapper, rawResponse.status)
     } catch (error: any) {
       console.error('API Error:', error)
       
@@ -285,6 +289,7 @@ export const useApi = () => {
         } else if (typeof error.data === 'string') {
           errorMessage = error.data
         }
+        
       } else if (error?.response?.data) {
         // Alternative error response format
         if (error.response.data.detail) {
@@ -301,6 +306,7 @@ export const useApi = () => {
       return {
         isSuccess: false,
         error: errorMessage,
+        statusCode: error?.status || error?.statusCode || 500
       }
     }
   }
@@ -317,6 +323,7 @@ export const useApi = () => {
       return {
         isSuccess: false,
         error: 'Authentication token not found',
+        statusCode: 401
       }
     }
 

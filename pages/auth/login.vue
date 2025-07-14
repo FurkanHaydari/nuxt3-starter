@@ -32,7 +32,7 @@
                   id="tcknOrMemberNumber" 
                   placeholder="TC Kimlik No veya Üye No"
                   :disabled="loading"
-                  @input="validateTcknOrMemberNumberField"
+                  @input="handleTcknInput"
                   @blur="validateTcknOrMemberNumberField"
                   required>
                 <div v-if="tcknError" class="invalid-feedback">
@@ -51,7 +51,7 @@
                     id="password"
                     placeholder="Şifrenizi girin"
                     :disabled="loading"
-                    @input="validatePasswordField"
+                    @input="handlePasswordInput"
                     @blur="validatePasswordField"
                     required>
                   <button 
@@ -178,16 +178,33 @@ const validatePasswordField = () => {
   passwordError.value = validation.isValid ? '' : validation.error || ''
 }
 
+// Input event handlers
+const handleTcknInput = () => {
+  // Typing sırasında error'ı clear et
+  if (tcknError.value && form.tcknOrMemberNumber.length > 0) {
+    tcknError.value = ''
+  }
+}
+
+const handlePasswordInput = () => {
+  // Typing sırasında error'ı clear et
+  if (passwordError.value && form.password.length > 0) {
+    passwordError.value = ''
+  }
+}
+
 // Handle login
 const handleLogin = async () => {
+  // Clear backend errors (modal messages)
   errorMessage.value = ''
   successMessage.value = ''
   clearError()
 
-  // Final validation before submit
+  // Validate fields - bu errors field altında gösterilecek
   validateTcknOrMemberNumberField()
   validatePasswordField()
 
+  // Eğer field validation'ları başarısızsa, backend'e istek gönderme
   if (!isFormValid.value) {
     return
   }
@@ -202,23 +219,22 @@ const handleLogin = async () => {
     // Redirect directly to dashboard or home
     await navigateTo('/')
   } else {
-    errorMessage.value = result.error || 'Giriş yapılırken bir hata oluştu'
+    // Backend errors - modalda göster
+    if (!result.isFieldError) {
+      errorMessage.value = result.error || 'Giriş yapılırken bir hata oluştu'
+    }
   }
 }
 
-// Clear messages and field errors when form changes
+// Clear backend error messages when form changes
 watch([() => form.tcknOrMemberNumber, () => form.password], () => {
+  // Sadece backend errors'ları clear et (modal messages)
   errorMessage.value = ''
   successMessage.value = ''
   clearError()
   
-  // Clear field errors when user starts typing
-  if (tcknError.value && form.tcknOrMemberNumber) {
-    tcknError.value = ''
-  }
-  if (passwordError.value && form.password) {
-    passwordError.value = ''
-  }
+  // Field errors'ları user typing yaparken clear etme
+  // Onlar blur ve validation trigger'larıyla manage edilecek
 })
 </script>
 

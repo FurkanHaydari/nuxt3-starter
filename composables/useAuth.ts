@@ -119,6 +119,54 @@ const validateStrongPassword = (password: string): { isValid: boolean; error?: s
   return { isValid: true }
 }
 
+// Helper function to determine if an error should be shown at field level vs modal level
+const isFieldLevelError = (errorMessage: string): boolean => {
+  const errorLower = errorMessage.toLowerCase()
+  
+  // System/service level errors should be shown in modal (these take priority)
+  const systemErrorKeywords = [
+    'mernis', 'nvi', 'kimlik doğrulama sistemi',
+    'sistem', 'system', 'service', 'hizmet',
+    'server', 'sunucu', 'bağlantı', 'connection',
+    'timeout', 'zaman aşımı', 'geçici', 'temporary',
+    'one or more validation errors', 'validation errors occurred',
+    'doğrulanamadı', 'verification failed', 'could not verify'
+  ]
+  
+  // Check if it's a system error first (these take priority)
+  if (systemErrorKeywords.some(keyword => errorLower.includes(keyword))) {
+    return false // Show in modal
+  }
+  
+  // Field-level errors are those that relate to specific form fields and are simple format errors
+  const fieldErrorKeywords = [
+    'already exists', 'zaten mevcut', 'kayıtlı',
+    'invalid format', 'geçersiz format', 'format',
+    'too short', 'too long', 'çok kısa', 'çok uzun',
+    'required', 'zorunlu', 'gerekli'
+  ]
+  
+  // Check if it's a field error and also mentions a specific field
+  const fieldMentioned = [
+    'email', 'e-posta', 'mail',
+    'telefon', 'phone', 'tel',
+    'şifre', 'password', 'parola',
+    'ad', 'name', 'isim',
+    'soyad', 'surname', 'lastname',
+    'meslek', 'profession'
+  ]
+  
+  const hasFieldKeyword = fieldErrorKeywords.some(keyword => errorLower.includes(keyword))
+  const hasFieldMention = fieldMentioned.some(field => errorLower.includes(field))
+  
+  if (hasFieldKeyword && hasFieldMention) {
+    return true // Show under field
+  }
+  
+  // Default: if unclear, show in modal for better UX
+  return false
+}
+
 // Remember me functionality
 const useRememberMe = () => {
   const config = useRuntimeConfig()
@@ -216,11 +264,12 @@ export const useAuth = () => {
     authStore.clearError()
 
     try {
-      // Client-side validation - only basic checks
-      const validation = validateLoginForm(credentials)
-      if (!validation.isValid) {
-        authStore.setError(validation.error!)
-        return { success: false, error: validation.error }
+      // Frontend validation artık field level'da yapılacak, burada sadece API call
+      // Client-side validation sadece boş field kontrolü yapacak
+      if (!credentials.tcknOrMemberNumber.trim() || !credentials.password.trim()) {
+        const error = 'Tüm alanları doldurmanız gerekmektedir.'
+        authStore.setError(error)
+        return { success: false, error, isFieldError: false }
       }
 
       // Call API
@@ -254,36 +303,38 @@ export const useAuth = () => {
         // Debug: Log the full response for troubleshooting
         console.log('Login failed - Full response:', response)
         
-        // Map backend authentication errors to specific messages
+        // Deterministik error handling - HTTP status code ve response structure'a göre
         let errorMessage = 'Giriş yapılırken bir hata oluştu'
         
-        // Handle specific authentication scenarios according to requirements
-        if (response.error?.includes('User not found') || 
-            response.error?.includes('not found') ||
-            response.error?.includes('does not exist') ||
-            response.error?.includes('kullanıcı bulunmamaktadır')) {
-          // Senaryo-1: Hem TC Kimlik No hem de Şifre değeri eşleşmiyorsa (kullanıcı bulunamadı)
-          errorMessage = 'Böyle bir kullanıcı bulunmamaktadır. Lütfen kontrol edip tekrar deneyiniz.'
-        } else if (response.error?.includes('Invalid password') ||
-                   response.error?.includes('Invalid TCKN or password') || 
-                   response.error?.includes('Invalid login') ||
-                   response.error?.includes('TCKN or password') ||
-                   response.error?.includes('Invalid credentials')) {
-          // Senaryo-2: Değerlerden biri doğru, diğeri yanlış ise (şifre hatalı)
+        // Backend'den gelen specific error response'ları kontrol et
+        if (response.statusCode === 400) {
+          // Bad Request - validation errors
+          errorMessage = 'Girilen bilgiler doğrulanamadı. Lütfen TC Kimlik No ve diğer bilgilerinizi kontrol edip tekrar deneyiniz.'
+        } else if (response.statusCode === 401) {
+          // Unauthorized - invalid credentials
           errorMessage = 'TC Kimlik No / Üye No veya Şifre hatalı.'
+        } else if (response.statusCode === 404) {
+          // Not Found - user not found
+          errorMessage = 'Böyle bir kullanıcı bulunmamaktadır. Lütfen kontrol edip tekrar deneyiniz.'
+        } else if (response.statusCode === 422) {
+          // Unprocessable Entity - validation failed (MERNIS etc.)
+          errorMessage = 'Girilen TC Kimlik No bilgileri doğrulanamadı. Lütfen TC Kimlik No\'nuzu kontrol edip tekrar deneyiniz.'
+        } else if (response.statusCode === 500) {
+          // Internal Server Error
+          errorMessage = 'Sistemde geçici bir sorun oluştu. Lütfen daha sonra tekrar deneyiniz.'
         } else {
-          // For any other backend error (including validation), show generic message
+          // Default for any other status codes
           errorMessage = 'TC Kimlik No / Üye No veya Şifre hatalı.'
         }
 
         console.log('Mapped error message:', errorMessage)
         authStore.setError(errorMessage)
-        return { success: false, error: errorMessage }
+        return { success: false, error: errorMessage, isFieldError: false }
       }
     } catch (error: any) {
       const errorMessage = error?.message || 'Beklenmeyen bir hata oluştu'
       authStore.setError(errorMessage)
-      return { success: false, error: errorMessage }
+      return { success: false, error: errorMessage, isFieldError: false }
     } finally {
       authStore.setLoading(false)
     }
@@ -299,16 +350,16 @@ export const useAuth = () => {
       const response = await api.auth.register(userData)
 
       if (response.isSuccess) {
-        return { success: true, message: response.data?.message || 'Kayıt başarılı' }
+        return { success: true, message: response.data?.message || 'Kayıt başarılı', isFieldError: false }
       } else {
         const error = response.error || 'Kayıt olurken bir hata oluştu'
         authStore.setError(error)
-        return { success: false, error }
+        return { success: false, error, isFieldError: false }
       }
     } catch (error: any) {
       const errorMessage = error?.message || 'Beklenmeyen bir hata oluştu'
       authStore.setError(errorMessage)
-      return { success: false, error: errorMessage }
+      return { success: false, error: errorMessage, isFieldError: false }
     } finally {
       authStore.setLoading(false)
     }
@@ -324,16 +375,20 @@ export const useAuth = () => {
       const response = await api.auth.registerRequest(userData)
 
       if (response.isSuccess) {
-        return { success: true, message: response.data?.message || 'SMS kodu gönderildi' }
+        return { success: true, message: response.data?.message || 'SMS kodu gönderildi', isFieldError: false }
       } else {
         const error = response.error || 'SMS kodu gönderilirken bir hata oluştu'
+        
+        // Determine if this is a field-level error by checking content
+        const isFieldError = isFieldLevelError(error)
+        
         authStore.setError(error)
-        return { success: false, error }
+        return { success: false, error, isFieldError }
       }
     } catch (error: any) {
       const errorMessage = error?.message || 'Beklenmeyen bir hata oluştu'
       authStore.setError(errorMessage)
-      return { success: false, error: errorMessage }
+      return { success: false, error: errorMessage, isFieldError: false }
     } finally {
       authStore.setLoading(false)
     }
@@ -349,17 +404,21 @@ export const useAuth = () => {
       const response = await api.auth.verifyRegistration(data)
 
       if (response.isSuccess && response.data?.success) {
-        return { success: true, message: response.data?.message || 'Kayıt başarıyla tamamlandı' }
+        return { success: true, message: response.data?.message || 'Kayıt başarıyla tamamlandı', isFieldError: false }
       } else {
         // Use the specific error message from data.message if available
         const error = response.data?.message || response.error || 'SMS doğrulama başarısız'
+        
+        // Determine if this is a field-level error
+        const isFieldError = isFieldLevelError(error)
+        
         authStore.setError(error)
-        return { success: false, error }
+        return { success: false, error, isFieldError }
       }
     } catch (error: any) {
       const errorMessage = error?.message || 'Beklenmeyen bir hata oluştu'
       authStore.setError(errorMessage)
-      return { success: false, error: errorMessage }
+      return { success: false, error: errorMessage, isFieldError: false }
     } finally {
       authStore.setLoading(false)
     }
@@ -403,16 +462,16 @@ export const useAuth = () => {
       })
 
       if (response.isSuccess) {
-        return { success: true, data: response.data }
+        return { success: true, data: response.data, isFieldError: false }
       } else {
         const error = response.error || 'Şifre sıfırlama isteği gönderilemedi'
         authStore.setError(error)
-        return { success: false, error }
+        return { success: false, error, isFieldError: false }
       }
     } catch (error: any) {
       const errorMessage = error?.message || 'Beklenmeyen bir hata oluştu'
       authStore.setError(errorMessage)
-      return { success: false, error: errorMessage }
+      return { success: false, error: errorMessage, isFieldError: false }
     } finally {
       authStore.setLoading(false)
     }
@@ -432,16 +491,16 @@ export const useAuth = () => {
       })
 
       if (response.isSuccess) {
-        return { success: true, message: response.data || 'Şifre sıfırlama bağlantısı gönderildi' }
+        return { success: true, message: response.data || 'Şifre sıfırlama bağlantısı gönderildi', isFieldError: false }
       } else {
         const error = response.error || 'Şifre sıfırlama bağlantısı gönderilemedi'
         authStore.setError(error)
-        return { success: false, error }
+        return { success: false, error, isFieldError: false }
       }
     } catch (error: any) {
       const errorMessage = error?.message || 'Beklenmeyen bir hata oluştu'
       authStore.setError(errorMessage)
-      return { success: false, error: errorMessage }
+      return { success: false, error: errorMessage, isFieldError: false }
     } finally {
       authStore.setLoading(false)
     }
@@ -521,4 +580,4 @@ export const useAuth = () => {
     getRememberedCredentials,
     clearRememberedCredentials,
   }
-} 
+}
