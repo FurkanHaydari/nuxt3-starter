@@ -1,55 +1,62 @@
 export function useNotifications() {
-  const showErrorModal = ref(false)
-  const showSuccessModal = ref(false)
+  // Use Nuxt's global state management
+  const showErrorModal = useState('showErrorModal', () => false)
+  const showSuccessModal = useState('showSuccessModal', () => false)
 
-  const errorModal = reactive({
+  const errorModal = useState('errorModal', () => ({
     title: 'Bir Hata Oluştu',
     message: '',
     showRetry: false
-  })
+  }))
 
-  const successModal = reactive({
+  const successModal = useState('successModal', () => ({
     title: 'Başarılı',
     message: '',
     showAction: false,
-    actionText: ''
-  })
+    actionText: '',
+    action: null as (() => void) | null
+  }))
 
-  let lastAction: (() => Promise<void>) | null = null
+  // Use global state for lastAction too
+  const lastAction = useState<(() => Promise<void>) | null>('lastAction', () => null)
 
   const showError = (message: string, title?: string, showRetry: boolean = false) => {
-    errorModal.title = title || 'Bir Hata Oluştu'
-    errorModal.message = message
-    errorModal.showRetry = showRetry
+    console.log('showError called with:', { message, title, showRetry })
+    errorModal.value.title = title || 'Bir Hata Oluştu'
+    errorModal.value.message = message
+    errorModal.value.showRetry = showRetry
     showErrorModal.value = true
+    console.log('Modal state after showError:', { showErrorModal: showErrorModal.value, errorModal: errorModal.value })
   }
 
-  const showSuccess = (message: string, title?: string, showAction: boolean = false, actionText: string = '') => {
-    successModal.title = title || 'Başarılı'
-    successModal.message = message
-    successModal.showAction = showAction
-    successModal.actionText = actionText
+  const showSuccess = (message: string, title?: string, showAction: boolean = false, actionText: string = '', action?: () => void) => {
+    successModal.value.title = title || 'Başarılı'
+    successModal.value.message = message
+    successModal.value.showAction = showAction
+    successModal.value.actionText = actionText
+    successModal.value.action = action || null
     showSuccessModal.value = true
   }
 
   const closeErrorModal = () => {
     showErrorModal.value = false
-    errorModal.showRetry = false
+    errorModal.value.showRetry = false
   }
 
   const closeSuccessModal = () => {
     showSuccessModal.value = false
-    successModal.showAction = false
+    successModal.value.showAction = false
+    successModal.value.action = null
   }
 
   const setLastAction = (action: (() => Promise<void>) | null) => {
-    lastAction = action
+    lastAction.value = action
   }
 
   const retryLastAction = async () => {
-    if (lastAction) {
+    if (lastAction.value) {
       closeErrorModal()
-      await lastAction()
+      await lastAction.value()
     }
   }
 

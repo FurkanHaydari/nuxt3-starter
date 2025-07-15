@@ -9,16 +9,10 @@
               <p class="text-muted">Hesabınıza giriş yapın</p>
             </div>
             
-            <!-- Error Alert -->
-            <div v-if="hasError || errorMessage" class="alert alert-danger" role="alert">
+            <!-- Error Alert - Sadece field validation errors için -->
+            <div v-if="hasFieldErrors" class="alert alert-warning" role="alert">
               <i class="bi bi-exclamation-triangle me-2"></i>
-              {{ error || errorMessage }}
-            </div>
-
-            <!-- Success Alert -->
-            <div v-if="successMessage" class="alert alert-success" role="alert">
-              <i class="bi bi-check-circle me-2"></i>
-              {{ successMessage }}
+              Lütfen form hatalarını düzeltin.
             </div>
             
             <form @submit.prevent="handleLogin">
@@ -122,13 +116,23 @@ useHead({
 const { 
   login, 
   loading, 
-  hasError, 
-  error, 
   clearError, 
   validateTckn, 
   validatePassword,
   getRememberedCredentials 
 } = useAuth()
+
+// Error handling
+const {
+  hasFieldErrors,
+  getFieldError,
+  validateField,
+  validateForm,
+  handleInputChange,
+  handleBackendError,
+  handleSuccess,
+  clearAllFieldErrors
+} = useErrorHandling()
 
 // Reactive form data
 const form = reactive({
@@ -138,18 +142,17 @@ const form = reactive({
 })
 
 // Local state
-const errorMessage = ref('')
-const successMessage = ref('')
 const showPassword = ref(false)
-const tcknError = ref('')
-const passwordError = ref('')
+
+// Computed properties
+const tcknError = computed(() => getFieldError('tckn'))
+const passwordError = computed(() => getFieldError('password'))
 
 // Form validation
 const isFormValid = computed(() => {
   return form.tcknOrMemberNumber && 
          form.password && 
-         !tcknError.value && 
-         !passwordError.value
+         !hasFieldErrors.value
 })
 
 // Load remembered credentials on mount
@@ -169,43 +172,34 @@ const togglePasswordVisibility = () => {
 
 // Field validations
 const validateTcknOrMemberNumberField = () => {
-  const validation = validateTckn(form.tcknOrMemberNumber)
-  tcknError.value = validation.isValid ? '' : validation.error || ''
+  return validateField('tckn', form.tcknOrMemberNumber, validateTckn)
 }
 
 const validatePasswordField = () => {
-  const validation = validatePassword(form.password)
-  passwordError.value = validation.isValid ? '' : validation.error || ''
+  return validateField('password', form.password, validatePassword)
 }
 
 // Input event handlers
 const handleTcknInput = () => {
-  // Typing sırasında error'ı clear et
-  if (tcknError.value && form.tcknOrMemberNumber.length > 0) {
-    tcknError.value = ''
-  }
+  handleInputChange('tckn', form.tcknOrMemberNumber)
 }
 
 const handlePasswordInput = () => {
-  // Typing sırasında error'ı clear et
-  if (passwordError.value && form.password.length > 0) {
-    passwordError.value = ''
-  }
+  handleInputChange('password', form.password)
 }
 
 // Handle login
 const handleLogin = async () => {
-  // Clear backend errors (modal messages)
-  errorMessage.value = ''
-  successMessage.value = ''
+  // Clear backend errors
   clearError()
 
-  // Validate fields - bu errors field altında gösterilecek
-  validateTcknOrMemberNumberField()
-  validatePasswordField()
+  // Validate form fields
+  const isValid = validateForm({
+    tckn: validateTcknOrMemberNumberField,
+    password: validatePasswordField
+  })
 
-  // Eğer field validation'ları başarısızsa, backend'e istek gönderme
-  if (!isFormValid.value) {
+  if (!isValid) {
     return
   }
 
@@ -216,12 +210,33 @@ const handleLogin = async () => {
   })
 
   if (result.success) {
-    // Redirect directly to dashboard or home
-    await navigateTo('/')
+    // Clear field errors on success
+    clearAllFieldErrors()
+    
+    // Show success modal and redirect
+    handleSuccess(
+      'Giriş başarılı! Yönlendiriliyorsunuz...',
+      'Hoş Geldiniz!',
+      true,
+      'Devam Et',
+      async () => {
+        await navigateTo('/')
+      }
+    )
+    
+    // Navigate after a short delay
+    setTimeout(async () => {
+      await navigateTo('/')
+    }, 1500)
   } else {
     // Backend errors - modalda göster
     if (!result.isFieldError) {
-      errorMessage.value = result.error || 'Giriş yapılırken bir hata oluştu'
+      handleBackendError(
+        result.error || 'Giriş yapılırken bir hata oluştu. Lütfen bilgilerinizi kontrol edip tekrar deneyin.',
+        'Giriş Hatası',
+        true,
+        handleLogin
+      )
     }
   }
 }
@@ -229,12 +244,7 @@ const handleLogin = async () => {
 // Clear backend error messages when form changes
 watch([() => form.tcknOrMemberNumber, () => form.password], () => {
   // Sadece backend errors'ları clear et (modal messages)
-  errorMessage.value = ''
-  successMessage.value = ''
   clearError()
-  
-  // Field errors'ları user typing yaparken clear etme
-  // Onlar blur ve validation trigger'larıyla manage edilecek
 })
 </script>
 

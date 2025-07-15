@@ -104,11 +104,6 @@
                       <i class="bi bi-person me-2"></i>Profil Bilgileri
                     </NuxtLink>
                   </li>
-                  <li>
-                    <NuxtLink to="/auth/change-password" class="dropdown-item">
-                      <i class="bi bi-key me-2"></i>Şifre Değiştir
-                    </NuxtLink>
-                  </li>
                   <li><hr class="dropdown-divider"></li>
                   <li>
                     <button @click="handleLogout" class="dropdown-item text-danger">
@@ -220,11 +215,6 @@
                   <li>
                     <NuxtLink to="/profile" class="dropdown-item">
                       <i class="bi bi-person me-2"></i>Profil Bilgileri
-                    </NuxtLink>
-                  </li>
-                  <li>
-                    <NuxtLink to="/auth/change-password" class="dropdown-item">
-                      <i class="bi bi-key me-2"></i>Şifre Değiştir
                     </NuxtLink>
                   </li>
                   <li><hr class="dropdown-divider"></li>

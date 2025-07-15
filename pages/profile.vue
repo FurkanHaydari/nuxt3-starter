@@ -103,35 +103,34 @@
               </h5>
             </div>
             <div class="card-body p-4">
-              <!-- Success Message -->
-              <div v-if="successMessage" class="alert alert-success" role="alert">
-                <i class="bi bi-check-circle me-2"></i>
-                {{ successMessage }}
-              </div>
-
-              <!-- Error Message -->
-              <div v-if="errorMessage" class="alert alert-danger" role="alert">
+              <!-- Field Validation Errors -->
+              <div v-if="hasFieldErrors" class="alert alert-warning" role="alert">
                 <i class="bi bi-exclamation-triangle me-2"></i>
-                {{ errorMessage }}
+                Lütfen form hatalarını düzeltin.
               </div>
 
               <form @submit.prevent="handleSubmit">
                 <div class="row g-3">
                   <!-- Username -->
                   <div class="col-md-6">
-                    <label for="username" class="form-label">Kullanıcı Adı</label>
+                    <label for="username" class="form-label">Kullanıcı Adı <span class="text-danger">*</span></label>
                     <input 
                       v-model="form.username"
                       type="text" 
                       class="form-control" 
                       :class="{ 'is-invalid': usernameError }"
                       id="username" 
-                      placeholder="Kullanıcı adınızı girin"
+                      placeholder="örn: ahmet_123"
                       :disabled="loading"
-                      @input="validateUsernameField"
-                      @blur="validateUsernameField">
+                      @input="handleUsernameInput"
+                      @blur="validateUsernameField"
+                      maxlength="20"
+                      required>
+                    <div class="form-text text-muted small">
+                      Harf ile başlamalı, sadece harf, rakam ve alt çizgi içerebilir (3-20 karakter)
+                    </div>
                     <div v-if="usernameError" class="invalid-feedback">
-                      {{ usernameError }}
+                      <i class="bi bi-exclamation-circle me-1"></i>{{ usernameError }}
                     </div>
                   </div>
 
@@ -220,9 +219,19 @@ useHead({
 
 // State
 const loading = ref(false)
-const errorMessage = ref('')
-const successMessage = ref('')
 const profileData = ref<any>(null)
+
+// Error handling
+const {
+  hasFieldErrors,
+  getFieldError,
+  validateField,
+  validateForm,
+  handleInputChange,
+  handleBackendError,
+  handleSuccess,
+  clearAllFieldErrors
+} = useErrorHandling()
 
 // Form data
 const form = reactive({
@@ -236,9 +245,9 @@ const originalValues = reactive({
   professionId: ''
 })
 
-// Validation errors
-const usernameError = ref('')
-const professionError = ref('')
+// Computed properties
+const usernameError = computed(() => getFieldError('username'))
+const professionError = computed(() => getFieldError('profession'))
 
 // Get user from auth store
 const { user, isAuthenticated } = useAuth()
@@ -249,35 +258,69 @@ const hasChanges = computed(() => {
          form.professionId !== originalValues.professionId
 })
 
-// Validation functions
-const validateUsernameField = () => {
-  if (form.username && form.username.length < 3) {
-    usernameError.value = 'Kullanıcı adı en az 3 karakter olmalıdır.'
-    return
+// Username validator function
+const validateUsername = (username: string) => {
+  if (!username || username.trim() === '') {
+    return { isValid: false, error: 'Kullanıcı adı boş bırakılamaz' }
   }
   
-  if (form.username && form.username.length > 50) {
-    usernameError.value = 'Kullanıcı adı en fazla 50 karakter olmalıdır.'
-    return
+  if (username.length < 3) {
+    return { isValid: false, error: 'Kullanıcı adı en az 3 karakter olmalıdır' }
+  }
+  
+  if (username.length > 20) {
+    return { isValid: false, error: 'Kullanıcı adı en fazla 20 karakter olmalıdır' }
   }
 
-  if (form.username && !/^[a-zA-Z0-9_]+$/.test(form.username)) {
-    usernameError.value = 'Kullanıcı adı sadece harf, rakam ve alt çizgi içerebilir.'
-    return
+  // Must start with a letter
+  if (!/^[a-zA-Z]/.test(username)) {
+    return { isValid: false, error: 'Kullanıcı adı harf ile başlamalıdır' }
   }
 
-  usernameError.value = ''
+  // Cannot end with underscore
+  if (username.endsWith('_')) {
+    return { isValid: false, error: 'Kullanıcı adı alt çizgi ile bitemez' }
+  }
+
+  // Cannot have consecutive underscores
+  if (username.includes('__')) {
+    return { isValid: false, error: 'Kullanıcı adı ardışık alt çizgi içeremez' }
+  }
+
+  // Only letters, numbers and underscore allowed (this check comes last)
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    return { isValid: false, error: 'Kullanıcı adı sadece harf, rakam ve alt çizgi içerebilir' }
+  }
+
+  return { isValid: true }
+}
+
+// Profession validator function
+const validateProfession = (professionId: string) => {
+  // Profession is optional, so always valid
+  return { isValid: true }
+}
+
+// Validation functions
+const validateUsernameField = () => {
+  return validateField('username', form.username, validateUsername)
 }
 
 const validateProfessionField = () => {
-  // Profession is optional, so no validation needed
-  professionError.value = ''
+  return validateField('profession', form.professionId, validateProfession)
+}
+
+// Input handlers
+const handleUsernameInput = () => {
+  // Real-time validation during typing
+  validateUsernameField()
+  handleInputChange('username', form.username)
 }
 
 // Handle profession selection from component
 const onProfessionSelectionChanged = (profession: {id: number, name: string} | null) => {
   // Clear any profession-related errors when a valid selection is made
-  professionError.value = ''
+  handleInputChange('profession', form.professionId)
 }
 
 // Helper functions
@@ -300,10 +343,7 @@ const resetForm = () => {
   form.username = originalValues.username
   form.professionId = originalValues.professionId
   
-  usernameError.value = ''
-  professionError.value = ''
-  errorMessage.value = ''
-  successMessage.value = ''
+  clearAllFieldErrors()
 }
 
 // Load user profile
@@ -349,19 +389,18 @@ const loadProfile = async () => {
 
 // Form submission
 const handleSubmit = async () => {
-  errorMessage.value = ''
-  successMessage.value = ''
-  
-  // Validation
-  validateUsernameField()
-  validateProfessionField()
-  
-  if (usernameError.value || professionError.value) {
+  // Validate form fields
+  const isValid = validateForm({
+    username: validateUsernameField,
+    profession: validateProfessionField
+  })
+
+  if (!isValid) {
     return
   }
 
   if (!hasChanges.value) {
-    errorMessage.value = 'Değişiklik yapılmadı.'
+    handleBackendError('Değişiklik yapılmadı.', 'Uyarı', false)
     return
   }
 
@@ -382,8 +421,7 @@ const handleSubmit = async () => {
       if (!isNaN(professionIdNum) && professionIdNum > 0) {
         updateData.Profession = professionIdNum.toString()
       } else {
-        console.error('Invalid profession ID:', form.professionId)
-        errorMessage.value = 'Geçersiz meslek seçimi.'
+        handleBackendError('Geçersiz meslek seçimi.', 'Hata', false)
         loading.value = false
         return
       }
@@ -391,8 +429,7 @@ const handleSubmit = async () => {
     
     // Check if updateData is empty
     if (Object.keys(updateData).length === 0) {
-      console.error('No data to update - updateData is empty!')
-      errorMessage.value = 'Güncellenecek veri bulunamadı.'
+      handleBackendError('Güncellenecek veri bulunamadı.', 'Hata', false)
       loading.value = false
       return
     }
@@ -400,21 +437,32 @@ const handleSubmit = async () => {
     const response = await api.profile.updateProfile(updateData)
 
     if (response.isSuccess) {
-      successMessage.value = response.data || 'Profil başarıyla güncellendi.'
+      // Clear field errors on success
+      clearAllFieldErrors()
       
       // Update original values
       originalValues.username = form.username
       originalValues.professionId = form.professionId
       
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        successMessage.value = ''
-      }, 3000)
+      handleSuccess(
+        response.data || 'Profil başarıyla güncellendi.',
+        'Profil Güncellendi'
+      )
     } else {
-      errorMessage.value = response.error || 'Profil güncellenirken hata oluştu.'
+      handleBackendError(
+        response.error || 'Profil güncellenirken hata oluştu.',
+        'Güncelleme Hatası',
+        true,
+        handleSubmit
+      )
     }
   } catch (error: any) {
-    errorMessage.value = error?.message || 'Beklenmeyen bir hata oluştu.'
+    handleBackendError(
+      error?.message || 'Beklenmeyen bir hata oluştu.',
+      'Hata',
+      true,
+      handleSubmit
+    )
   } finally {
     loading.value = false
   }

@@ -58,6 +58,11 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
+// Debug props
+watch(() => props.show, (newVal) => {
+  console.log('ErrorModal show prop changed:', newVal, props)
+})
+
 const closeModal = () => {
   emit('close')
 }
@@ -93,7 +98,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1050;
+  z-index: 9999;
   animation: fadeIn 0.3s ease;
 }
 

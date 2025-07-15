@@ -17,15 +17,15 @@
                   v-model="step1Form.tcknOrMemberNumber"
                   type="text" 
                   class="form-control" 
-                  :class="{ 'is-invalid': tcknError && hasInteracted.tckn }"
+                  :class="{ 'is-invalid': getFieldError('tcknOrMemberNumber') }"
                   id="tcknOrMemberNumber" 
                   placeholder="TC Kimlik No veya Üye No"
                   :disabled="loading"
                   @input="validateTcknOrMemberNumberField"
-                  @blur="hasInteracted.tckn = true; validateTcknOrMemberNumberField()"
+                  @blur="validateTcknOrMemberNumberField"
                   required>
-                <div v-if="tcknError && hasInteracted.tckn" class="invalid-feedback">
-                  {{ tcknError }}
+                <div v-if="getFieldError('tcknOrMemberNumber')" class="invalid-feedback">
+                  {{ getFieldError('tcknOrMemberNumber') }}
                 </div>
               </div>
               
@@ -35,16 +35,16 @@
                   v-model="step1Form.birthDate"
                   type="date" 
                   class="form-control" 
-                  :class="{ 'is-invalid': birthDateError && hasInteracted.birthDate }"
+                  :class="{ 'is-invalid': getFieldError('birthDate') }"
                   id="birthDate"
                   :disabled="loading"
                   :max="maxBirthDate"
                   :min="minBirthDate"
                   @input="validateBirthDateField"
-                  @blur="hasInteracted.birthDate = true; validateBirthDateField()"
+                  @blur="validateBirthDateField"
                   required>
-                <div v-if="birthDateError && hasInteracted.birthDate" class="invalid-feedback">
-                  {{ birthDateError }}
+                <div v-if="getFieldError('birthDate')" class="invalid-feedback">
+                  {{ getFieldError('birthDate') }}
                 </div>
               </div>
               
@@ -157,29 +157,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Error Modal -->
-  <ErrorModal 
-    :show="showErrorModal"
-    :title="errorModal.title"
-    :message="errorModal.message"
-    :details="errorModal.details"
-    :show-retry="errorModal.showRetry"
-    @close="closeErrorModal"
-    @retry="retryLastAction"
-  />
-
-  <!-- Success Modal -->
-  <SuccessModal 
-    :show="showSuccessModal"
-    :title="successModal.title"
-    :message="successModal.message"
-    :details="successModal.details"
-    :show-action="successModal.showAction"
-    :action-text="successModal.actionText"
-    @close="closeSuccessModal"
-    @action="successAction"
-  />
 </template>
 
 <script setup lang="ts">
@@ -192,6 +169,19 @@ useHead({
 
 // Auth composable
 const { validateTckn } = useAuth()
+
+// Error handling composable
+const {
+  hasFieldErrors,
+  getFieldError,
+  validateField,
+  validateForm,
+  handleInputChange,
+  handleBackendError,
+  handleSuccess,
+  clearAllFieldErrors,
+  scrollToFirstError
+} = useErrorHandling()
 
 // Current step management
 const currentStep = ref(1) // 1: TC+DoğumTarihi, 2: Email/SMS Seçimi, 3: Başarılı
@@ -206,12 +196,6 @@ const step2Form = reactive({
   method: '' // 'email' or 'sms'
 })
 
-// Interaction tracking for validation
-const hasInteracted = reactive({
-  tckn: false,
-  birthDate: false
-})
-
 // Contact info from step 1 response
 const contactInfo = reactive({
   maskedEmail: '',
@@ -223,29 +207,6 @@ const contactInfo = reactive({
 // State
 const loading = ref(false)
 const finalMessage = ref('')
-
-// Validation errors
-const tcknError = ref('')
-const birthDateError = ref('')
-
-// Error/Success Modals
-const showErrorModal = ref(false)
-const errorModal = reactive({
-  title: 'Bir Hata Oluştu',
-  message: '',
-  details: [] as string[],
-  showRetry: false
-})
-let lastAction: (() => Promise<void>) | null = null
-
-const showSuccessModal = ref(false)
-const successModal = reactive({
-  title: '',
-  message: '',
-  details: [] as string[],
-  showAction: false,
-  actionText: ''
-})
 
 // Date constraints for birth date (18+ years old)
 const today = new Date()
@@ -273,70 +234,73 @@ const currentStepDescription = computed(() => {
 const isStep1Valid = computed(() => {
   return step1Form.tcknOrMemberNumber && 
          step1Form.birthDate && 
-         !tcknError.value && 
-         !birthDateError.value
+         !getFieldError('tcknOrMemberNumber') && 
+         !getFieldError('birthDate')
 })
 
 // Validation functions
 const validateTcknOrMemberNumberField = () => {
   const validation = validateTckn(step1Form.tcknOrMemberNumber)
-  tcknError.value = validation.isValid ? '' : validation.error || ''
+  handleInputChange('tcknOrMemberNumber', step1Form.tcknOrMemberNumber, validation.isValid ? null : validation.error)
 }
 
 const validateBirthDateField = () => {
+  let error = null
+  
   if (!step1Form.birthDate) {
-    birthDateError.value = 'Doğum Tarihi girilmesi zorunludur.'
-    return
-  }
-
-  const birthDate = new Date(step1Form.birthDate)
-  const today = new Date()
-  
-  if (isNaN(birthDate.getTime())) {
-    birthDateError.value = 'Geçerli bir tarih giriniz.'
-    return
-  }
-
-  // 18 yaş kontrolü
-  const age = today.getFullYear() - birthDate.getFullYear()
-  const monthDiff = today.getMonth() - birthDate.getMonth()
-  const dayDiff = today.getDate() - birthDate.getDate()
-  
-  let actualAge = age
-  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-    actualAge--
-  }
-
-  if (actualAge < 18) {
-    const minDate = new Date(today)
-    minDate.setFullYear(today.getFullYear() - 100)
-    const maxDate = new Date(today)
-    maxDate.setFullYear(today.getFullYear() - 18)
+    error = 'Doğum Tarihi girilmesi zorunludur.'
+  } else {
+    const birthDate = new Date(step1Form.birthDate)
+    const today = new Date()
     
-    birthDateError.value = `Doğum Tarihi ${minDate.toLocaleDateString('tr-TR')} ile ${maxDate.toLocaleDateString('tr-TR')} tarihleri arasında olmalıdır.`
-    return
-  }
+    if (isNaN(birthDate.getTime())) {
+      error = 'Geçerli bir tarih giriniz.'
+    } else {
+      // 18 yaş kontrolü
+      const age = today.getFullYear() - birthDate.getFullYear()
+      const monthDiff = today.getMonth() - birthDate.getMonth()
+      const dayDiff = today.getDate() - birthDate.getDate()
+      
+      let actualAge = age
+      if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+        actualAge--
+      }
 
-  birthDateError.value = ''
+      if (actualAge < 18) {
+        const minDate = new Date(today)
+        minDate.setFullYear(today.getFullYear() - 100)
+        const maxDate = new Date(today)
+        maxDate.setFullYear(today.getFullYear() - 18)
+        
+        error = `Doğum Tarihi ${minDate.toLocaleDateString('tr-TR')} ile ${maxDate.toLocaleDateString('tr-TR')} tarihleri arasında olmalıdır.`
+      }
+    }
+  }
+  
+  handleInputChange('birthDate', step1Form.birthDate, error)
 }
 
 // Step handlers
 const handleStep1Submit = async () => {
-  // Mark all fields as interacted for validation
-  hasInteracted.tckn = true
-  hasInteracted.birthDate = true
-  
-  // Final validation
+  // Validate all fields
   validateTcknOrMemberNumberField()
   validateBirthDateField()
   
   if (!isStep1Valid.value) {
-    // Frontend validation errors are already shown under fields
+    // Show alert for frontend validation errors
+    const errors = []
+    if (getFieldError('tcknOrMemberNumber')) errors.push(getFieldError('tcknOrMemberNumber'))
+    if (getFieldError('birthDate')) errors.push(getFieldError('birthDate'))
+    
+    if (errors.length > 0) {
+      // Show frontend validation errors in alert
+      handleBackendError('Lütfen tüm alanları doğru şekilde doldurun', 'Form Hatası', errors)
+      scrollToFirstError()
+    }
     return
   }
 
   loading.value = true
-  lastAction = handleStep1Submit
 
   try {
     const api = useApi()
@@ -357,27 +321,27 @@ const handleStep1Submit = async () => {
         currentStep.value = 2
       } else {
         // Backend'de doğrulama başarısız
-        showError(
+        handleBackendError(
           response.data.message || 'Bilgiler kontrol edilirken hata oluştu',
           'Doğrulama Hatası',
           undefined,
-          true // Show retry button
+          () => handleStep1Submit() // Retry callback
         )
       }
     } else {
-      showError(
+      handleBackendError(
         response.error || 'Bilgiler kontrol edilirken hata oluştu',
         'Doğrulama Hatası',
         undefined,
-        true // Show retry button
+        () => handleStep1Submit() // Retry callback
       )
     }
   } catch (error: any) {
-    showError(
+    handleBackendError(
       error?.message || 'Beklenmeyen bir hata oluştu',
       'Doğrulama Hatası',
       undefined,
-      true // Show retry button
+      () => handleStep1Submit() // Retry callback
     )
   } finally {
     loading.value = false
@@ -390,7 +354,6 @@ const handleStep2Submit = async () => {
   }
 
   loading.value = true
-  lastAction = handleStep2Submit
 
   try {
     const api = useApi()
@@ -403,25 +366,25 @@ const handleStep2Submit = async () => {
     if (response.isSuccess) {
       finalMessage.value = response.data || 'Şifre sıfırlama bağlantısı gönderilmiştir.'
       currentStep.value = 3
-      showSuccess(
+      handleSuccess(
         'Şifre sıfırlama linki başarıyla gönderildi',
         'İşlem Başarılı',
         [finalMessage.value]
       )
     } else {
-      showError(
+      handleBackendError(
         response.error || 'Şifre sıfırlama linki gönderilirken hata oluştu',
         'Gönderim Hatası',
         undefined,
-        true // Show retry button
+        () => handleStep2Submit() // Retry callback
       )
     }
   } catch (error: any) {
-    showError(
+    handleBackendError(
       error?.message || 'Beklenmeyen bir hata oluştu',
       'Gönderim Hatası',
       undefined,
-      true // Show retry button
+      () => handleStep2Submit() // Retry callback
     )
   } finally {
     loading.value = false
@@ -439,56 +402,12 @@ const resetToStep1 = () => {
   step1Form.birthDate = ''
   step2Form.method = ''
   finalMessage.value = ''
-  tcknError.value = ''
-  birthDateError.value = ''
-  hasInteracted.tckn = false
-  hasInteracted.birthDate = false
+  clearAllFieldErrors()
   
   // Reset contact info
   contactInfo.maskedEmail = ''
   contactInfo.maskedPhone = ''
   contactInfo.hasEmail = false
   contactInfo.hasPhone = false
-}
-
-// Modal functions
-const showError = (message: string, title?: string, details?: string[], showRetry: boolean = false) => {
-  errorModal.title = title || 'Bir Hata Oluştu'
-  errorModal.message = message
-  errorModal.details = details || []
-  errorModal.showRetry = showRetry
-  showErrorModal.value = true
-}
-
-const closeErrorModal = () => {
-  showErrorModal.value = false
-  errorModal.details = []
-  errorModal.showRetry = false
-}
-
-const retryLastAction = async () => {
-  if (lastAction) {
-    closeErrorModal()
-    await lastAction()
-  }
-}
-
-const showSuccess = (message: string, title?: string, details?: string[], showAction: boolean = false, actionText: string = '') => {
-  successModal.title = title || 'Başarılı'
-  successModal.message = message
-  successModal.details = details || []
-  successModal.showAction = showAction
-  successModal.actionText = actionText
-  showSuccessModal.value = true
-}
-
-const closeSuccessModal = () => {
-  showSuccessModal.value = false
-  successModal.details = []
-  successModal.showAction = false
-}
-
-const successAction = () => {
-  closeSuccessModal()
 }
 </script> 

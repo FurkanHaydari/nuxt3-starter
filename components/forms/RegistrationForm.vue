@@ -10,7 +10,8 @@
             id="firstName" 
             v-model="form.firstName"
             :class="{ 'is-invalid': hasFieldError('firstName') }"
-            @blur="hasInteracted.firstName = true"
+            @input="hasInteracted.firstName = true; validateField('firstName')"
+            @blur="hasInteracted.firstName = true; validateField('firstName')"
             required>
           <div v-if="getFieldError('firstName')" class="invalid-feedback">
             <i class="bi bi-exclamation-circle me-1"></i>{{ getFieldError('firstName') }}
@@ -26,7 +27,8 @@
             id="lastName" 
             v-model="form.lastName"
             :class="{ 'is-invalid': hasFieldError('lastName') }"
-            @blur="hasInteracted.lastName = true"
+            @input="hasInteracted.lastName = true; validateField('lastName')"
+            @blur="hasInteracted.lastName = true; validateField('lastName')"
             required>
           <div v-if="getFieldError('lastName')" class="invalid-feedback">
             <i class="bi bi-exclamation-circle me-1"></i>{{ getFieldError('lastName') }}
@@ -43,7 +45,8 @@
         id="tcKimlikNo" 
         v-model="form.tcKimlikNo"
         :class="{ 'is-invalid': hasFieldError('tcKimlikNo') }"
-        @blur="hasInteracted.tcKimlikNo = true"
+        @input="hasInteracted.tcKimlikNo = true; validateField('tcKimlikNo')"
+        @blur="hasInteracted.tcKimlikNo = true; validateField('tcKimlikNo')"
         placeholder="11 haneli TC Kimlik numaranız"
         maxlength="11"
         required>
@@ -60,7 +63,8 @@
         id="birthDate" 
         v-model="form.birthDate"
         :class="{ 'is-invalid': hasFieldError('birthDate') }"
-        @blur="hasInteracted.birthDate = true"
+        @input="hasInteracted.birthDate = true; validateField('birthDate')"
+        @blur="hasInteracted.birthDate = true; validateField('birthDate')"
         required>
       <div v-if="getFieldError('birthDate')" class="invalid-feedback">
         <i class="bi bi-exclamation-circle me-1"></i>{{ getFieldError('birthDate') }}
@@ -75,7 +79,8 @@
         id="email" 
         v-model="form.email"
         :class="{ 'is-invalid': hasFieldError('email') }"
-        @blur="hasInteracted.email = true"
+        @input="hasInteracted.email = true; validateField('email')"
+        @blur="hasInteracted.email = true; validateField('email')"
         required>
       <div v-if="getFieldError('email')" class="invalid-feedback">
         <i class="bi bi-exclamation-circle me-1"></i>{{ getFieldError('email') }}
@@ -90,7 +95,8 @@
         id="phone" 
         v-model="form.phoneNumber"
         :class="{ 'is-invalid': hasFieldError('phoneNumber') }"
-        @blur="hasInteracted.phoneNumber = true"
+        @input="hasInteracted.phoneNumber = true; validateField('phoneNumber')"
+        @blur="hasInteracted.phoneNumber = true; validateField('phoneNumber')"
         placeholder="5XXXXXXXXX veya 5XX XXX XX XX"
         required>
       <div v-if="getFieldError('phoneNumber')" class="invalid-feedback">
@@ -106,7 +112,7 @@
       variant="searchable"
       :frontend-error="getFieldError('professionId')"
       :backend-error="''"
-      @blur="hasInteracted.professionId = true"
+      @blur="hasInteracted.professionId = true; validateField('professionId')"
       @selection-changed="onProfessionChange" />
     
     <div class="mb-3">
@@ -118,7 +124,8 @@
           id="password" 
           v-model="form.password"
           :class="{ 'is-invalid': hasFieldError('password') }"
-          @blur="hasInteracted.password = true"
+          @input="hasInteracted.password = true; validateField('password')"
+          @blur="hasInteracted.password = true; validateField('password')"
           placeholder="En az 8 karakter, büyük/küçük harf, rakam ve özel karakter"
           required>
         <button 
@@ -141,7 +148,8 @@
           id="confirmPassword" 
           v-model="form.confirmPassword"
           :class="{ 'is-invalid': hasFieldError('confirmPassword') }"
-          @blur="hasInteracted.confirmPassword = true"
+          @input="hasInteracted.confirmPassword = true; validateField('confirmPassword')"
+          @blur="hasInteracted.confirmPassword = true; validateField('confirmPassword')"
           placeholder="Şifrenizi tekrar girin"
           required>
         <button 
@@ -186,7 +194,8 @@
           id="membershipAgreement" 
           v-model="form.membershipAgreementConsent"
           :class="{ 'is-invalid': hasFieldError('membershipAgreementConsent') }"
-          @blur="hasInteracted.membershipAgreementConsent = true"
+          @change="hasInteracted.membershipAgreementConsent = true; validateField('membershipAgreementConsent')"
+          @blur="hasInteracted.membershipAgreementConsent = true; validateField('membershipAgreementConsent')"
           required>
         <label class="form-check-label" for="membershipAgreement">
           <a href="#" class="text-decoration-none">Üyelik Sözleşmesi</a>'ni kabul ediyorum <span class="text-danger">*</span>
@@ -239,10 +248,25 @@ interface Props {
 
 interface Emits {
   (e: 'submit'): void
+  (e: 'validation-error', errors: string[]): void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+// Field labels for better error messages
+const fieldLabels = {
+  firstName: 'Ad',
+  lastName: 'Soyad',
+  tcKimlikNo: 'TC Kimlik No',
+  birthDate: 'Doğum Tarihi',
+  email: 'E-posta Adresi',
+  phoneNumber: 'Telefon Numarası',
+  professionId: 'Meslek',
+  password: 'Şifre',
+  confirmPassword: 'Şifre Tekrarı',
+  membershipAgreementConsent: 'Üyelik Sözleşmesi'
+}
 
 // Form validation
 const validationSchema = {
@@ -250,8 +274,46 @@ const validationSchema = {
   lastName: { required: true },
   tcKimlikNo: { 
     required: true, 
-    pattern: /^\d{11}$/,
-    custom: (value: string) => value.length !== 11 ? 'TC Kimlik No 11 haneli olmalıdır' : null
+    custom: (value: string) => {
+      if (!value) return null
+      
+      // Uzunluk kontrolü
+      if (value.length !== 11) {
+        return 'TC Kimlik No 11 haneli olmalıdır'
+      }
+      
+      // Sayı kontrolü
+      if (!/^\d{11}$/.test(value)) {
+        return 'TC Kimlik No sadece rakam içermelidir'
+      }
+      
+      // İlk rakam 0 olamaz
+      if (value[0] === '0') {
+        return 'TC Kimlik No 0 ile başlayamaz'
+      }
+      
+      // TCKN algoritması kontrolü
+      const digits = value.split('').map(Number)
+      
+      // 10. rakam kontrolü (tek basamakların toplamı * 7 - çift basamakların toplamı) mod 10
+      const oddSum = digits[0] + digits[2] + digits[4] + digits[6] + digits[8]
+      const evenSum = digits[1] + digits[3] + digits[5] + digits[7]
+      const tenthDigit = ((oddSum * 7) - evenSum) % 10
+      
+      if (tenthDigit !== digits[9]) {
+        return 'Geçersiz TC Kimlik No'
+      }
+      
+      // 11. rakam kontrolü (ilk 10 rakamın toplamının mod 10'u)
+      const sumFirst10 = digits.slice(0, 10).reduce((a, b) => a + b, 0)
+      const eleventhDigit = sumFirst10 % 10
+      
+      if (eleventhDigit !== digits[10]) {
+        return 'Geçersiz TC Kimlik No'
+      }
+      
+      return null
+    }
   },
   birthDate: { 
     required: true,
@@ -272,7 +334,6 @@ const validationSchema = {
   email: { required: true, email: true },
   phoneNumber: { 
     required: true, 
-    pattern: /^5\d{2}(\s?\d{3}\s?\d{2}\s?\d{2}|\d{7})$/,
     custom: (value: string) => {
       if (!value) return null
       return !/^5\d{2}(\s?\d{3}\s?\d{2}\s?\d{2}|\d{7})$/.test(value) 
@@ -294,17 +355,16 @@ const validationSchema = {
   }
 }
 
-const { hasInteracted, validate, getFieldError, hasFieldError, validationErrors, markAllAsInteracted } = useFormValidation(props.form, validationSchema)
+const { hasInteracted, validate, validateField, getFieldError, hasFieldError, validationErrors, markAllAsInteracted } = useFormValidation(props.form, validationSchema, fieldLabels)
 
 // Password visibility
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
 const onProfessionChange = (profession: {id: number, name: string} | null) => {
-  // Clear profession error when valid selection is made
-  if (profession) {
-    // Error will be cleared automatically by validation
-  }
+  // Mark as interacted and validate when profession changes
+  hasInteracted.professionId = true
+  validateField('professionId')
 }
 
 const handleSubmit = () => {
@@ -313,6 +373,8 @@ const handleSubmit = () => {
   if (validate()) {
     emit('submit')
   } else {
+    // Emit validation errors to parent
+    emit('validation-error', validationErrors.value)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }

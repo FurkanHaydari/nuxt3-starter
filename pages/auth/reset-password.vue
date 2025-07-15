@@ -10,16 +10,10 @@
             </div>
             
             <!-- Error Alert -->
-            <div v-if="errorMessage" class="alert alert-danger" role="alert">
-              <i class="bi bi-exclamation-triangle me-2"></i>
-              {{ errorMessage }}
-            </div>
+            <!-- Error messages now shown in global modal -->
 
             <!-- Success Alert -->
-            <div v-if="successMessage" class="alert alert-success" role="alert">
-              <i class="bi bi-check-circle me-2"></i>
-              {{ successMessage }}
-            </div>
+            <!-- Success messages now shown in global modal -->
 
             <!-- Token Invalid/Expired -->
             <div v-if="!isTokenValid" class="text-center">
@@ -46,7 +40,7 @@
                     v-model="form.newPassword"
                     :type="showPassword ? 'text' : 'password'"
                     class="form-control" 
-                    :class="{ 'is-invalid': passwordError }"
+                    :class="{ 'is-invalid': getFieldError('newPassword') }"
                     id="newPassword" 
                     placeholder="Yeni şifrenizi girin"
                     :disabled="loading"
@@ -60,8 +54,8 @@
                     <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
                   </button>
                 </div>
-                <div v-if="passwordError" class="invalid-feedback">
-                  {{ passwordError }}
+                <div v-if="getFieldError('newPassword')" class="invalid-feedback">
+                  {{ getFieldError('newPassword') }}
                 </div>
                 <div class="form-text">
                   Şifre en az 8 karakter olmalı ve büyük harf, küçük harf, rakam içermelidir.
@@ -75,7 +69,7 @@
                     v-model="form.confirmPassword"
                     :type="showConfirmPassword ? 'text' : 'password'"
                     class="form-control" 
-                    :class="{ 'is-invalid': confirmPasswordError }"
+                    :class="{ 'is-invalid': getFieldError('confirmPassword') }"
                     id="confirmPassword" 
                     placeholder="Şifrenizi tekrar girin"
                     :disabled="loading"
@@ -89,8 +83,8 @@
                     <i :class="showConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
                   </button>
                 </div>
-                <div v-if="confirmPasswordError" class="invalid-feedback">
-                  {{ confirmPasswordError }}
+                <div v-if="getFieldError('confirmPassword')" class="invalid-feedback">
+                  {{ getFieldError('confirmPassword') }}
                 </div>
               </div>
               
@@ -145,6 +139,20 @@ useHead({
   ]
 })
 
+// Composables
+const { showError, showSuccess, setLastAction } = useNotifications()
+const {
+  hasFieldErrors,
+  getFieldError,
+  validateField,
+  validateForm,
+  handleInputChange,
+  handleBackendError,
+  handleSuccess,
+  clearAllFieldErrors,
+  scrollToFirstError
+} = useErrorHandling()
+
 // Get token from URL
 const route = useRoute()
 const token = computed(() => route.query.token as string)
@@ -157,47 +165,38 @@ const form = reactive({
 
 // State
 const loading = ref(false)
-const errorMessage = ref('')
-const successMessage = ref('')
 const isTokenValid = ref(true)
 const isSuccess = ref(false)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
-// Validation errors
-const passwordError = ref('')
-const confirmPasswordError = ref('')
-
 // Computed properties
 const isFormValid = computed(() => {
   return form.newPassword && 
          form.confirmPassword && 
-         !passwordError.value && 
-         !confirmPasswordError.value
+         !getFieldError('newPassword') && 
+         !getFieldError('confirmPassword')
 })
 
 // Validation functions
 const validatePasswordField = () => {
+  let error = null
+  
   if (!form.newPassword) {
-    passwordError.value = 'Şifre girilmesi zorunludur.'
-    return
+    error = 'Şifre girilmesi zorunludur.'
+  } else if (form.newPassword.length < 8) {
+    error = 'Şifre en az 8 karakter olmalıdır.'
+  } else {
+    const hasUpperCase = /[A-Z]/.test(form.newPassword)
+    const hasLowerCase = /[a-z]/.test(form.newPassword)
+    const hasNumbers = /\d/.test(form.newPassword)
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
+      error = 'Şifre büyük harf, küçük harf ve rakam içermelidir.'
+    }
   }
-
-  if (form.newPassword.length < 8) {
-    passwordError.value = 'Şifre en az 8 karakter olmalıdır.'
-    return
-  }
-
-  const hasUpperCase = /[A-Z]/.test(form.newPassword)
-  const hasLowerCase = /[a-z]/.test(form.newPassword)
-  const hasNumbers = /\d/.test(form.newPassword)
-
-  if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
-    passwordError.value = 'Şifre büyük harf, küçük harf ve rakam içermelidir.'
-    return
-  }
-
-  passwordError.value = ''
+  
+  handleInputChange('newPassword', form.newPassword, error)
   
   // Re-validate confirm password if it's filled
   if (form.confirmPassword) {
@@ -206,17 +205,15 @@ const validatePasswordField = () => {
 }
 
 const validateConfirmPasswordField = () => {
+  let error = null
+  
   if (!form.confirmPassword) {
-    confirmPasswordError.value = 'Şifre tekrarı girilmesi zorunludur.'
-    return
+    error = 'Şifre tekrarı girilmesi zorunludur.'
+  } else if (form.newPassword !== form.confirmPassword) {
+    error = 'Şifreler eşleşmiyor.'
   }
-
-  if (form.newPassword !== form.confirmPassword) {
-    confirmPasswordError.value = 'Şifreler eşleşmiyor.'
-    return
-  }
-
-  confirmPasswordError.value = ''
+  
+  handleInputChange('confirmPassword', form.confirmPassword, error)
 }
 
 // Check token validity on mount
@@ -229,18 +226,25 @@ onMounted(async () => {
 
 // Form submission
 const handleSubmit = async () => {
-  errorMessage.value = ''
-  successMessage.value = ''
-  
-  // Final validation
+  // Validate all fields
   validatePasswordField()
   validateConfirmPasswordField()
   
   if (!isFormValid.value) {
+    // Show alert for frontend validation errors
+    const errors = []
+    if (getFieldError('newPassword')) errors.push(getFieldError('newPassword'))
+    if (getFieldError('confirmPassword')) errors.push(getFieldError('confirmPassword'))
+    
+    if (errors.length > 0) {
+      showError('Lütfen tüm alanları doğru şekilde doldurun', 'Form Hatası', errors)
+      scrollToFirstError()
+    }
     return
   }
 
   loading.value = true
+  setLastAction(handleSubmit)
 
   try {
     const api = useApi()
@@ -252,12 +256,31 @@ const handleSubmit = async () => {
 
     if (response.isSuccess) {
       isSuccess.value = true
-      successMessage.value = response.data || 'Şifreniz başarıyla güncellendi'
+      showSuccess(
+        response.data || 'Şifreniz başarıyla güncellendi',
+        'Şifre Güncellendi',
+        [],
+        true,
+        'Giriş Yap',
+        async () => {
+          await navigateTo('/auth/login')
+        }
+      )
     } else {
-      errorMessage.value = response.error || 'Şifre güncellenirken hata oluştu'
+      showError(
+        response.error || 'Şifre güncellenirken hata oluştu',
+        'Şifre Güncelleme Hatası',
+        undefined,
+        true // Show retry
+      )
     }
   } catch (error: any) {
-    errorMessage.value = error?.message || 'Beklenmeyen bir hata oluştu'
+    showError(
+      error?.message || 'Beklenmeyen bir hata oluştu',
+      'Şifre Güncelleme Hatası',
+      undefined,
+      true // Show retry
+    )
   } finally {
     loading.value = false
   }

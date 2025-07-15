@@ -15,6 +15,7 @@
               :form="registrationForm"
               :loading="loading"
               @submit="submitRegistration"
+              @validation-error="handleValidationErrors"
             />
 
             <!-- Step 2: SMS OTP Verification -->
@@ -24,18 +25,14 @@
               :masked-phone="maskedPhone"
               :resend-countdown="resendCountdown"
               :loading="loading"
-              :otp-error="errors.otpCode"
+              :otp-error="otpError"
               @submit="verifyOtp"
               @resend="resendOtp"
               @back="goBackToForm"
             />
 
-            <!-- Error Alert -->
-            <div v-if="error" class="alert alert-danger mt-3">
-              <i class="bi bi-exclamation-triangle me-2"></i>
-              {{ error }}
-            </div>
-
+            <!-- Error Alert - Removed since backend errors now go to modal -->
+            
             <!-- Login Link -->
             <div v-if="currentStep === 1" class="text-center mt-3">
               <span class="text-muted">Zaten hesabınız var mı? </span>
@@ -48,27 +45,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Error Modal -->
-  <ErrorModal 
-    :show="showErrorModal"
-    :title="errorModal.title"
-    :message="errorModal.message"
-    :show-retry="errorModal.showRetry"
-    @close="closeErrorModal"
-    @retry="retryLastAction"
-  />
-
-  <!-- Success Modal -->
-  <SuccessModal 
-    :show="showSuccessModal"
-    :title="successModal.title"
-    :message="successModal.message"
-    :show-action="successModal.showAction"
-    :action-text="successModal.actionText"
-    @close="closeSuccessModal"
-    @action="() => navigateTo('/dashboard')"
-  />
 </template>
 
 <script setup lang="ts">
@@ -84,8 +60,15 @@ useHead({
 })
 
 // Composables
-const { registerRequest, verifyRegistration, loading, error, clearError } = useAuth()
-const { showError, showSuccess, showErrorModal, showSuccessModal, errorModal, successModal, closeErrorModal, closeSuccessModal, setLastAction, retryLastAction } = useNotifications()
+const { registerRequest, verifyRegistration, loading, clearError } = useAuth()
+const { showError, showSuccess, setLastAction } = useNotifications()
+const { 
+  getFieldError,
+  setFieldError,
+  clearFieldError,
+  handleBackendError, 
+  handleSuccess 
+} = useErrorHandling()
 
 // Data
 const currentStep = ref(1)
@@ -113,10 +96,8 @@ const otpForm = reactive({
   otpCode: ''
 })
 
-// Errors (only for OTP, registration form errors handled by component)
-const errors = reactive({
-  otpCode: ''
-})
+// Computed
+const otpError = computed(() => getFieldError('otpCode'))
 
 // Computed
 const maskedPhone = computed(() => {
@@ -129,8 +110,9 @@ const maskedPhone = computed(() => {
 })
 
 // Methods
-const clearErrors = () => {
-  errors.otpCode = ''
+const handleValidationErrors = (errors: string[]) => {
+  // Show frontend validation errors in alert
+  showError('Lütfen tüm alanları doğru şekilde doldurun', 'Form Hatası', errors)
 }
 
 const submitRegistration = async () => {
@@ -157,30 +139,34 @@ const submitRegistration = async () => {
     otpForm.phoneNumber = registrationForm.phoneNumber
     currentStep.value = 2
     startResendCountdown()
-  } else if (result.error) {
+  } else {
     // Handle backend errors - all backend errors now go to modal
-    showError(
-      result.error,
+    const errorMessage = result.error || 'Kayıt işlemi sırasında bir hata oluştu'
+    console.log('Backend error for modal:', errorMessage)
+    
+    // Always show backend errors in modal
+    handleBackendError(
+      errorMessage,
       'Kayıt Hatası',
-      undefined,
-      true // Show retry button
+      true,
+      submitRegistration
     )
   }
 }
 
 const verifyOtp = async () => {
   if (!otpForm.otpCode.trim()) {
-    errors.otpCode = 'Doğrulama kodu girilmesi zorunludur'
+    setFieldError('otpCode', 'Doğrulama kodu girilmesi zorunludur')
     return
   }
 
   if (!/^\d{4}$/.test(otpForm.otpCode)) {
-    errors.otpCode = 'Doğrulama kodu 4 haneli olmalıdır'
+    setFieldError('otpCode', 'Doğrulama kodu 4 haneli olmalıdır')
     return
   }
 
   clearError()
-  errors.otpCode = ''
+  clearFieldError('otpCode')
   
   setLastAction(verifyOtp)
 
@@ -198,44 +184,49 @@ const verifyOtp = async () => {
     })
     
     if (loginResult.success) {
-      showSuccess(
+      handleSuccess(
         'Hesabınız oluşturuldu ve giriş yaptınız!',
         'Hoş Geldiniz',
         true,
-        'Dashboard\'a Git'
+        'Dashboard\'a Git',
+        async () => {
+          await navigateTo('/dashboard')
+        }
       )
       // Redirect to dashboard after a short delay
-      setTimeout(() => {
-        navigateTo('/dashboard')
+      setTimeout(async () => {
+        await navigateTo('/dashboard')
       }, 2000)
     } else {
       // If auto-login fails, show success and redirect to login
-      showSuccess(
+      handleSuccess(
         'Hesabınız başarıyla oluşturuldu!',
         'Üyelik Tamamlandı',
         true,
-        'Giriş Yap'
+        'Giriş Yap',
+        async () => {
+          await navigateTo('/auth/login')
+        }
       )
     }
-  } else if (result.error) {
-    // Backend errors'ları sadece modal'da göster
-    if (!result.isFieldError) {
-      showError(
-        result.error,
-        'Doğrulama Hatası',
-        undefined,
-        true // Show retry button
-      )
-    } else {
-      // Field error'sa OTP field'ına yaz
-      errors.otpCode = result.error
-    }
+  } else {
+    // Handle backend errors - all backend errors now go to modal
+    const errorMessage = result.error || 'Doğrulama işlemi sırasında bir hata oluştu'
+    console.log('OTP verification backend error for modal:', errorMessage)
+    
+    // Always show backend errors in modal
+    handleBackendError(
+      errorMessage,
+      'Doğrulama Hatası',
+      true,
+      verifyOtp
+    )
   }
 }
 
 const resendOtp = async () => {
   clearError()
-  clearErrors() // Clear OTP error before making request
+  clearFieldError('otpCode') // Clear OTP error before making request
   
   setLastAction(resendOtp)
   
@@ -255,17 +246,20 @@ const resendOtp = async () => {
 
   if (result.success) {
     startResendCountdown()
-    showSuccess(
+    handleSuccess(
       'Yeni doğrulama kodu gönderildi',
       'SMS Gönderildi'
     )
-  } else if (result.error) {
+  } else {
     // Handle backend errors during resend - all go to modal now
-    showError(
-      result.error,
+    const errorMessage = result.error || 'SMS gönderimi sırasında bir hata oluştu'
+    console.log('Resend OTP backend error for modal:', errorMessage)
+    
+    handleBackendError(
+      errorMessage,
       'SMS Gönderme Hatası',
-      undefined,
-      true // Show retry button
+      true,
+      resendOtp
     )
   }
 }
@@ -284,7 +278,7 @@ const startResendCountdown = () => {
 const goBackToForm = () => {
   currentStep.value = 1
   otpForm.otpCode = ''
-  errors.otpCode = ''
+  clearFieldError('otpCode')
   if (resendTimer) {
     clearInterval(resendTimer)
     resendTimer = null

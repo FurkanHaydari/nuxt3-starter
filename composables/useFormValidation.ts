@@ -14,10 +14,15 @@ export interface ValidationSchema {
 
 export function useFormValidation<T extends Record<string, any>>(
   form: T,
-  schema: ValidationSchema
+  schema: ValidationSchema,
+  fieldLabels: Record<string, string> = {}
 ) {
   const errors = reactive<Record<string, string>>({})
   const hasInteracted = reactive<Record<string, boolean>>({})
+
+  const getFieldLabel = (fieldName: string): string => {
+    return fieldLabels[fieldName] || fieldName
+  }
 
   const clearErrors = () => {
     Object.keys(errors).forEach(key => {
@@ -34,7 +39,7 @@ export function useFormValidation<T extends Record<string, any>>(
 
     // Required validation
     if (rule.required && (!value || (typeof value === 'string' && !value.trim()))) {
-      errors[fieldName] = `${fieldName} girilmesi zorunludur`
+      errors[fieldName] = `${getFieldLabel(fieldName)} girilmesi zorunludur`
       return false
     }
 
@@ -44,8 +49,8 @@ export function useFormValidation<T extends Record<string, any>>(
       return true
     }
 
-    // Email validation
-    if (rule.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    // Email validation - more strict regex
+    if (rule.email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) {
       errors[fieldName] = 'Geçerli bir e-posta adresi giriniz'
       return false
     }
