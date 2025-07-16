@@ -119,7 +119,6 @@ interface ResetPasswordRequest {
 }
 
 interface ChangePasswordRequest {
-  tcKimlikNo: string
   currentPassword: string
   newPassword: string
   confirmNewPassword: string
@@ -408,7 +407,7 @@ export const useApi = () => {
       },
 
       async changePassword(data: ChangePasswordRequest): Promise<ApiResponse<string>> {
-        return apiCall<string>('/auth/change-password', {
+        return authenticatedApiCall<string>('/auth/change-password', {
           method: 'POST',
           body: data,
         })

@@ -41,26 +41,6 @@
 
               <!-- Form -->
               <form v-else @submit.prevent="handleSubmit">
-                <!-- TC Kimlik No -->
-                <div class="mb-3">
-                  <label for="tcKimlikNo" class="form-label">TC Kimlik No *</label>
-                  <input 
-                    v-model="form.tcKimlikNo"
-                    type="text" 
-                    class="form-control" 
-                    :class="{ 'is-invalid': getFieldError('tcKimlikNo') }"
-                    id="tcKimlikNo" 
-                    placeholder="TC Kimlik numaranızı girin"
-                    maxlength="11"
-                    :disabled="loading"
-                    @input="validateTcKimlikField"
-                    @blur="validateTcKimlikField"
-                    required>
-                  <div v-if="getFieldError('tcKimlikNo')" class="invalid-feedback">
-                    {{ getFieldError('tcKimlikNo') }}
-                  </div>
-                </div>
-
                 <!-- Mevcut Şifre -->
                 <div class="mb-3">
                   <label for="currentPassword" class="form-label">Mevcut Şifre *</label>
@@ -89,59 +69,45 @@
                 </div>
 
                 <!-- Yeni Şifre -->
-                <div class="mb-3">
-                  <label for="newPassword" class="form-label">Yeni Şifre *</label>
-                  <div class="input-group">
-                    <input 
-                      v-model="form.newPassword"
-                      :type="showNewPassword ? 'text' : 'password'"
-                      class="form-control" 
-                      :class="{ 'is-invalid': getFieldError('newPassword') }"
-                      id="newPassword" 
-                      placeholder="Yeni şifrenizi girin"
-                      :disabled="loading"
-                      @input="validateNewPasswordField"
-                      @blur="validateNewPasswordField"
-                      required>
-                    <button 
-                      type="button" 
-                      class="btn btn-outline-secondary"
-                      @click="showNewPassword = !showNewPassword">
-                      <i :class="showNewPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-                    </button>
-                  </div>
-                  <div v-if="getFieldError('newPassword')" class="invalid-feedback">
-                    {{ getFieldError('newPassword') }}
-                  </div>
-                  <div class="form-text">
-                    Şifre en az 8 karakter olmalı ve büyük harf, küçük harf, rakam ve özel karakter içermelidir.
-                  </div>
-                </div>
+                <FormPasswordField
+                  v-model="form.newPassword"
+                  field-id="newPassword"
+                  label="Yeni Şifre"
+                  placeholder="Yeni şifrenizi girin"
+                  :disabled="loading"
+                  :error-message="getFieldError('newPassword')"
+                  :require-special-char="true"
+                  :min-strength-score="3"
+                  @input="onNewPasswordInput"
+                  @blur="validateNewPasswordField"
+                  @validation-change="onNewPasswordValidationChange"
+                />
 
                 <!-- Yeni Şifre Tekrar -->
-                <div class="mb-3">
-                  <label for="confirmNewPassword" class="form-label">Yeni Şifre Tekrar *</label>
-                  <div class="input-group">
-                    <input 
-                      v-model="form.confirmNewPassword"
-                      :type="showConfirmPassword ? 'text' : 'password'"
-                      class="form-control" 
-                      :class="{ 'is-invalid': getFieldError('confirmNewPassword') }"
-                      id="confirmNewPassword" 
-                      placeholder="Şifrenizi tekrar girin"
-                      :disabled="loading"
-                      @input="validateConfirmPasswordField"
-                      @blur="validateConfirmPasswordField"
-                      required>
-                    <button 
-                      type="button" 
-                      class="btn btn-outline-secondary"
-                      @click="showConfirmPassword = !showConfirmPassword">
-                      <i :class="showConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-                    </button>
+                <FormPasswordField
+                  v-model="form.confirmNewPassword"
+                  field-id="confirmNewPassword"
+                  label="Yeni Şifre Tekrar"
+                  placeholder="Şifrenizi tekrar girin"
+                  :disabled="loading"
+                  :error-message="getFieldError('confirmNewPassword')"
+                  :show-strength-indicator="false"
+                  :show-requirements="false"
+                  :require-special-char="true"
+                  :min-strength-score="3"
+                  @input="onConfirmPasswordInput"
+                  @blur="validateConfirmPasswordField"
+                />
+                
+                <!-- Enhanced password match indicator -->
+                <div v-if="form.confirmNewPassword" class="mt-2 mb-3">
+                  <div v-if="form.newPassword === form.confirmNewPassword" class="d-flex align-items-center">
+                    <i class="bi bi-check-circle text-success me-2"></i>
+                    <small class="text-success fw-medium">Şifreler eşleşiyor</small>
                   </div>
-                  <div v-if="getFieldError('confirmNewPassword')" class="invalid-feedback">
-                    {{ getFieldError('confirmNewPassword') }}
+                  <div v-else class="d-flex align-items-center">
+                    <i class="bi bi-x-circle text-danger me-2"></i>
+                    <small class="text-danger fw-medium">Şifreler eşleşmiyor</small>
                   </div>
                 </div>
 
@@ -149,7 +115,7 @@
                 <button 
                   type="submit" 
                   class="btn btn-primary w-100 mb-3"
-                  :disabled="loading || !isFormValid">
+                  :disabled="loading || !isFormValid || passwordsMismatch">
                   <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
                   <i v-else class="bi bi-key me-2"></i>
                   {{ loading ? 'Şifre güncelleniyor...' : 'Şifremi Değiştir' }}
@@ -179,11 +145,12 @@ useHead({
 })
 
 // Composables
-const { validateTckn } = useAuth()
 const { showError, showSuccess, setLastAction } = useNotifications()
 const {
   hasFieldErrors,
   getFieldError,
+  setFieldError,
+  clearFieldError,
   validateField,
   validateForm,
   handleInputChange,
@@ -193,9 +160,8 @@ const {
   scrollToFirstError
 } = useErrorHandling()
 
-// Form data
+// Form data (TC Kimlik No removed - using JWT token)
 const form = reactive({
-  tcKimlikNo: '',
   currentPassword: '',
   newPassword: '',
   confirmNewPassword: ''
@@ -205,38 +171,30 @@ const form = reactive({
 const loading = ref(false)
 const isSuccess = ref(false)
 const showCurrentPassword = ref(false)
-const showNewPassword = ref(false)
-const showConfirmPassword = ref(false)
+
+// Password validation state from PasswordField component
+const newPasswordValidation = ref({
+  isValid: false,
+  score: 0,
+  requirements: {},
+  strength: {}
+})
 
 // Computed properties
 const isFormValid = computed(() => {
-  return form.tcKimlikNo && 
-         form.currentPassword &&
+  return form.currentPassword &&
          form.newPassword && 
          form.confirmNewPassword &&
-         !getFieldError('tcKimlikNo') && 
          !getFieldError('currentPassword') &&
          !getFieldError('newPassword') && 
          !getFieldError('confirmNewPassword')
 })
 
-// Validation functions
-const validateTcKimlikField = () => {
-  let error = null
-  
-  if (!form.tcKimlikNo) {
-    error = 'TC Kimlik No girilmesi zorunludur.'
-  } else if (form.tcKimlikNo.length < 11) {
-    error = 'TC Kimlik No alanına en az 11 karakter girilmelidir.'
-  } else if (form.tcKimlikNo.length !== 11 || !/^\d{11}$/.test(form.tcKimlikNo)) {
-    error = 'TC Kimlik numaranızı tekrar kontrol edin.'
-  } else if (!validateTCKN(form.tcKimlikNo)) {
-    error = 'TC Kimlik numaranızı tekrar kontrol edin.'
-  }
-  
-  handleInputChange('tcKimlikNo', form.tcKimlikNo, error)
-}
+const passwordsMismatch = computed(() => {
+  return form.newPassword && form.confirmNewPassword && form.newPassword !== form.confirmNewPassword
+})
 
+// Validation functions - simplified with PasswordField
 const validateCurrentPasswordField = () => {
   let error = null
   
@@ -246,7 +204,11 @@ const validateCurrentPasswordField = () => {
     error = 'Şifre en az 8 karakter olmalıdır.'
   }
   
-  handleInputChange('currentPassword', form.currentPassword, error)
+  if (error) {
+    setFieldError('currentPassword', error)
+  } else {
+    clearFieldError('currentPassword')
+  }
 }
 
 const validateNewPasswordField = () => {
@@ -254,24 +216,15 @@ const validateNewPasswordField = () => {
   
   if (!form.newPassword) {
     error = 'Yeni şifre gereklidir.'
-  } else if (form.newPassword.length < 8) {
-    error = 'Geçersiz şifre.'
   } else if (form.newPassword === form.currentPassword) {
     error = 'Yeni şifre mevcut şifreden farklı olmalıdır.'
-  } else {
-    const hasUpperCase = /[A-Z]/.test(form.newPassword)
-    const hasLowerCase = /[a-z]/.test(form.newPassword)
-    const hasNumbers = /\d/.test(form.newPassword)
-    const hasSpecialChar = /[!@#$%^&*()_+\[\]{}|;:,.?"'<>-]/.test(form.newPassword)
-
-    if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
-      error = 'Geçersiz şifre.'
-    } else if (hasSequentialNumbers(form.newPassword) || hasRepeatingChars(form.newPassword)) {
-      error = 'Geçersiz şifre.'
-    }
   }
   
-  handleInputChange('newPassword', form.newPassword, error)
+  if (error) {
+    setFieldError('newPassword', error)
+  } else {
+    clearFieldError('newPassword')
+  }
   
   // Re-validate confirm password if it's filled
   if (form.confirmNewPassword) {
@@ -288,72 +241,62 @@ const validateConfirmPasswordField = () => {
     error = 'Lütfen aynı şifreleri giriniz.'
   }
   
-  handleInputChange('confirmNewPassword', form.confirmNewPassword, error)
-}
-
-// Helper functions
-const validateTCKN = (tckn: string): boolean => {
-  if (tckn.length !== 11 || !/^\d{11}$/.test(tckn)) return false
-  
-  const digits = tckn.split('').map(Number)
-  
-  // İlk rakam 0 olamaz
-  if (digits[0] === 0) return false
-  
-  // 10. rakam kontrolü
-  const oddSum = digits[0] + digits[2] + digits[4] + digits[6] + digits[8]
-  const evenSum = digits[1] + digits[3] + digits[5] + digits[7]
-  const tenthDigit = ((oddSum * 7) - evenSum) % 10
-  
-  if (tenthDigit !== digits[9]) return false
-  
-  // 11. rakam kontrolü
-  const sumFirst10 = digits.slice(0, 10).reduce((a, b) => a + b, 0)
-  const eleventhDigit = sumFirst10 % 10
-  
-  return eleventhDigit === digits[10]
-}
-
-const hasSequentialNumbers = (password: string): boolean => {
-  for (let i = 0; i < password.length - 2; i++) {
-    const char1 = password.charCodeAt(i)
-    const char2 = password.charCodeAt(i + 1)
-    const char3 = password.charCodeAt(i + 2)
-    
-    if (char2 === char1 + 1 && char3 === char2 + 1) {
-      return true
-    }
+  if (error) {
+    setFieldError('confirmNewPassword', error)
+  } else {
+    clearFieldError('confirmNewPassword')
   }
-  return false
 }
 
-const hasRepeatingChars = (password: string): boolean => {
-  for (let i = 0; i < password.length - 2; i++) {
-    if (password[i] === password[i + 1] && password[i + 1] === password[i + 2]) {
-      return true
-    }
+// Password validation change handler from PasswordField
+const onNewPasswordValidationChange = (data: any) => {
+  newPasswordValidation.value = data
+  
+  // Also re-validate confirm password if it has been entered
+  if (form.confirmNewPassword) {
+    validateConfirmPasswordField()
   }
-  return false
 }
 
-// Form submission
+// Realtime validation handlers
+const onNewPasswordInput = () => {
+  // Validate new password on input (realtime feedback)
+  validateNewPasswordField()
+  
+  // Also re-validate confirm password if it has been entered
+  if (form.confirmNewPassword) {
+    validateConfirmPasswordField()
+  }
+}
+
+const onConfirmPasswordInput = () => {
+  // Validate confirm password on input (realtime feedback)
+  validateConfirmPasswordField()
+}
+
+// Helper functions removed - FormPasswordField handles validation
+
+// Form submission (JWT token automatically sent, no TC Kimlik needed)
 const handleSubmit = async () => {
-  // Validate all fields
-  validateTcKimlikField()
+  // Validate all fields (TC Kimlik validation removed)
   validateCurrentPasswordField()
   validateNewPasswordField()
   validateConfirmPasswordField()
   
+  // Form validation check
+  if (form.newPassword !== form.confirmNewPassword) {
+    showError('Yeni şifreler eşleşmiyor. Lütfen aynı şifreleri giriniz.', 'Form Hatası')
+    return
+  }
+  
   if (!isFormValid.value) {
-    // Show alert for frontend validation errors
     const errors = []
-    if (getFieldError('tcKimlikNo')) errors.push(getFieldError('tcKimlikNo'))
     if (getFieldError('currentPassword')) errors.push(getFieldError('currentPassword'))
     if (getFieldError('newPassword')) errors.push(getFieldError('newPassword'))
     if (getFieldError('confirmNewPassword')) errors.push(getFieldError('confirmNewPassword'))
     
     if (errors.length > 0) {
-      showError('Lütfen tüm alanları doğru şekilde doldurun', 'Form Hatası', errors)
+      showError('Lütfen tüm alanları doğru şekilde doldurun', 'Form Hatası')
       scrollToFirstError()
     }
     return
@@ -365,8 +308,8 @@ const handleSubmit = async () => {
   try {
     const api = useApi()
     
+    // JWT token automatically included in API call
     const response = await api.auth.changePassword({
-      tcKimlikNo: form.tcKimlikNo,
       currentPassword: form.currentPassword,
       newPassword: form.newPassword,
       confirmNewPassword: form.confirmNewPassword
@@ -379,8 +322,8 @@ const handleSubmit = async () => {
         'Şifre Güncellendi',
         [],
         true,
-        'Otomatik Giriş Yap',
-        loginWithNewPassword
+        'Giriş Sayfasına Git',
+        () => navigateTo('/auth/login')
       )
     } else {
       showError(
@@ -407,44 +350,27 @@ const loginWithNewPassword = async () => {
   loading.value = true
   
   try {
-    const { login } = useAuth()
+    // Since we don't have TC Kimlik or member number in change password form,
+    // just redirect to login page with success message
+    showSuccess(
+      'Şifreniz başarıyla güncellendi. Lütfen yeni şifrenizle giriş yapın.',
+      'Şifre Güncellendi',
+      [],
+      false,
+      'Giriş Sayfasına Git',
+      async () => {
+        await navigateTo('/auth/login')
+      }
+    )
     
-    const result = await login({
-      tcknOrMemberNumber: form.tcKimlikNo,
-      password: form.newPassword
-    })
-    
-    if (result.success) {
-      showSuccess(
-        'Şifre güncellendi ve giriş yapıldı!',
-        'Hoş Geldiniz',
-        [],
-        true,
-        'Anasayfa\'ya Git',
-        async () => {
-          await navigateTo('/')
-        }
-      )
-      // Redirect after delay
-      setTimeout(async () => {
-        await navigateTo('/')
-      }, 2000)
-    } else {
-      showError(
-        'Otomatik giriş başarısız. Lütfen manuel giriş yapın.',
-        'Giriş Hatası',
-        undefined,
-        false,
-        'Giriş Sayfasına Git',
-        async () => {
-          await navigateTo('/auth/login')
-        }
-      )
-    }
+    // Redirect after delay
+    setTimeout(async () => {
+      await navigateTo('/auth/login')
+    }, 2000)
   } catch (error: any) {
     showError(
-      'Otomatik giriş başarısız. Lütfen manuel giriş yapın.',
-      'Giriş Hatası',
+      'Lütfen giriş sayfasından yeni şifrenizle giriş yapın.',
+      'Giriş Sayfasına Yönlendiriliyor',
       undefined,
       false,
       'Giriş Sayfasına Git',

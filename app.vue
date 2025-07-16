@@ -9,11 +9,9 @@ authStore.hydrate();
 // Global notifications
 const { showErrorModal, showSuccessModal, errorModal, successModal, closeErrorModal, closeSuccessModal, retryLastAction } = useNotifications()
 
-console.log('App.vue - Initial modal state:', { showErrorModal: showErrorModal.value, errorModal })
-
 // Debug modal state
 watch(showErrorModal, (newVal) => {
-  console.log('App.vue - showErrorModal changed:', newVal, errorModal)
+  // Modal state tracking (debug logs removed for production)
 }, { immediate: true })
 
 // export default defineNuxtPlugin((nuxtApp) => {

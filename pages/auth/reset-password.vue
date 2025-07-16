@@ -33,65 +33,53 @@
 
             <!-- Reset Form -->
             <form v-else-if="!isSuccess" @submit.prevent="handleSubmit">
-              <div class="mb-3">
-                <label for="newPassword" class="form-label">Yeni Şifre *</label>
-                <div class="input-group">
-                  <input 
-                    v-model="form.newPassword"
-                    :type="showPassword ? 'text' : 'password'"
-                    class="form-control" 
-                    :class="{ 'is-invalid': getFieldError('newPassword') }"
-                    id="newPassword" 
-                    placeholder="Yeni şifrenizi girin"
-                    :disabled="loading"
-                    @input="validatePasswordField"
-                    @blur="validatePasswordField"
-                    required>
-                  <button 
-                    type="button" 
-                    class="btn btn-outline-secondary"
-                    @click="showPassword = !showPassword">
-                    <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-                  </button>
-                </div>
-                <div v-if="getFieldError('newPassword')" class="invalid-feedback">
-                  {{ getFieldError('newPassword') }}
-                </div>
-                <div class="form-text">
-                  Şifre en az 8 karakter olmalı ve büyük harf, küçük harf, rakam içermelidir.
-                </div>
-              </div>
+              <!-- New Password Field -->
+              <FormPasswordField
+                v-model="form.newPassword"
+                field-id="newPassword"
+                label="Yeni Şifre"
+                placeholder="Yeni şifrenizi girin"
+                :disabled="loading"
+                :error-message="getFieldError('newPassword')"
+                :require-special-char="true"
+                :min-strength-score="3"
+                @input="onPasswordInput"
+                @blur="validatePasswordField"
+                @validation-change="onPasswordValidationChange"
+              />
               
-              <div class="mb-3">
-                <label for="confirmPassword" class="form-label">Şifre Tekrar *</label>
-                <div class="input-group">
-                  <input 
-                    v-model="form.confirmPassword"
-                    :type="showConfirmPassword ? 'text' : 'password'"
-                    class="form-control" 
-                    :class="{ 'is-invalid': getFieldError('confirmPassword') }"
-                    id="confirmPassword" 
-                    placeholder="Şifrenizi tekrar girin"
-                    :disabled="loading"
-                    @input="validateConfirmPasswordField"
-                    @blur="validateConfirmPasswordField"
-                    required>
-                  <button 
-                    type="button" 
-                    class="btn btn-outline-secondary"
-                    @click="showConfirmPassword = !showConfirmPassword">
-                    <i :class="showConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-                  </button>
+              <!-- Confirm Password Field -->
+              <FormPasswordField
+                v-model="form.confirmPassword"
+                field-id="confirmPassword"
+                label="Şifre Tekrar"
+                placeholder="Şifrenizi tekrar girin"
+                :disabled="loading"
+                :error-message="getFieldError('confirmPassword')"
+                :show-strength-indicator="false"
+                :show-requirements="false"
+                :require-special-char="true"
+                :min-strength-score="3"
+                @input="onConfirmPasswordInput"
+                @blur="validateConfirmPasswordField"
+              />
+              
+              <!-- Enhanced password match indicator -->
+              <div v-if="form.confirmPassword" class="mt-2 mb-3">
+                <div v-if="form.newPassword === form.confirmPassword" class="d-flex align-items-center">
+                  <i class="bi bi-check-circle text-success me-2"></i>
+                  <small class="text-success fw-medium">Şifreler eşleşiyor</small>
                 </div>
-                <div v-if="getFieldError('confirmPassword')" class="invalid-feedback">
-                  {{ getFieldError('confirmPassword') }}
+                <div v-else class="d-flex align-items-center">
+                  <i class="bi bi-x-circle text-danger me-2"></i>
+                  <small class="text-danger fw-medium">Şifreler eşleşmiyor</small>
                 </div>
               </div>
               
               <button 
                 type="submit" 
                 class="btn btn-primary w-100 mb-3"
-                :disabled="loading || !isFormValid">
+                :disabled="loading || !isFormValid || passwordsMismatch || !passwordValidation.isValid">
                 <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
                 <i v-else class="bi bi-check me-2"></i>
                 {{ loading ? 'Şifre güncelleniyor...' : 'Şifreyi Güncelle' }}
@@ -144,6 +132,8 @@ const { showError, showSuccess, setLastAction } = useNotifications()
 const {
   hasFieldErrors,
   getFieldError,
+  setFieldError,
+  clearFieldError,
   validateField,
   validateForm,
   handleInputChange,
@@ -167,8 +157,14 @@ const form = reactive({
 const loading = ref(false)
 const isTokenValid = ref(true)
 const isSuccess = ref(false)
-const showPassword = ref(false)
-const showConfirmPassword = ref(false)
+
+// Password validation state from PasswordField component
+const passwordValidation = ref({
+  isValid: false,
+  score: 0,
+  requirements: {},
+  strength: {}
+})
 
 // Computed properties
 const isFormValid = computed(() => {
@@ -178,25 +174,19 @@ const isFormValid = computed(() => {
          !getFieldError('confirmPassword')
 })
 
-// Validation functions
-const validatePasswordField = () => {
-  let error = null
-  
-  if (!form.newPassword) {
-    error = 'Şifre girilmesi zorunludur.'
-  } else if (form.newPassword.length < 8) {
-    error = 'Şifre en az 8 karakter olmalıdır.'
-  } else {
-    const hasUpperCase = /[A-Z]/.test(form.newPassword)
-    const hasLowerCase = /[a-z]/.test(form.newPassword)
-    const hasNumbers = /\d/.test(form.newPassword)
+const passwordsMismatch = computed(() => {
+  return form.newPassword && form.confirmPassword && form.newPassword !== form.confirmPassword
+})
 
-    if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
-      error = 'Şifre büyük harf, küçük harf ve rakam içermelidir.'
-    }
+// Password validation handled by FormPasswordField component
+const validatePasswordField = () => {
+  // FormPasswordField handles complex password validation
+  // Only check if field is empty for basic validation
+  if (!form.newPassword) {
+    setFieldError('newPassword', 'Şifre girilmesi zorunludur.')
+  } else {
+    clearFieldError('newPassword')
   }
-  
-  handleInputChange('newPassword', form.newPassword, error)
   
   // Re-validate confirm password if it's filled
   if (form.confirmPassword) {
@@ -205,15 +195,40 @@ const validatePasswordField = () => {
 }
 
 const validateConfirmPasswordField = () => {
-  let error = null
-  
+  // Simple password match validation
   if (!form.confirmPassword) {
-    error = 'Şifre tekrarı girilmesi zorunludur.'
+    setFieldError('confirmPassword', 'Şifre tekrarı girilmesi zorunludur.')
   } else if (form.newPassword !== form.confirmPassword) {
-    error = 'Şifreler eşleşmiyor.'
+    setFieldError('confirmPassword', 'Şifreler eşleşmiyor.')
+  } else {
+    clearFieldError('confirmPassword')
   }
+}
+
+// Password validation change handler from PasswordField
+const onPasswordValidationChange = (data: any) => {
+  passwordValidation.value = data
   
-  handleInputChange('confirmPassword', form.confirmPassword, error)
+  // Also re-validate confirm password if it has been entered
+  if (form.confirmPassword) {
+    validateConfirmPasswordField()
+  }
+}
+
+// Realtime validation handlers
+const onPasswordInput = () => {
+  // Validate password on input
+  validatePasswordField()
+  
+  // Also re-validate confirm password if it has been entered
+  if (form.confirmPassword) {
+    validateConfirmPasswordField()
+  }
+}
+
+const onConfirmPasswordInput = () => {
+  // Validate confirm password on input (realtime feedback)
+  validateConfirmPasswordField()
 }
 
 // Check token validity on mount
@@ -230,14 +245,19 @@ const handleSubmit = async () => {
   validatePasswordField()
   validateConfirmPasswordField()
   
+  // Form validation check
+  if (form.newPassword !== form.confirmPassword) {
+    showError('Şifreler eşleşmiyor. Lütfen aynı şifreleri giriniz.', 'Form Hatası')
+    return
+  }
+  
   if (!isFormValid.value) {
-    // Show alert for frontend validation errors
     const errors = []
     if (getFieldError('newPassword')) errors.push(getFieldError('newPassword'))
     if (getFieldError('confirmPassword')) errors.push(getFieldError('confirmPassword'))
     
     if (errors.length > 0) {
-      showError('Lütfen tüm alanları doğru şekilde doldurun', 'Form Hatası', errors)
+      showError('Lütfen tüm alanları doğru şekilde doldurun', 'Form Hatası')
       scrollToFirstError()
     }
     return
@@ -254,12 +274,16 @@ const handleSubmit = async () => {
       newPassword: form.newPassword
     })
 
-    if (response.isSuccess) {
+    // Check for success message in response
+    const isActuallySuccess = response.isSuccess || 
+                             (response.data && response.data.includes('başarı')) ||
+                             (response.error && response.error.includes('başarı'))
+    
+    if (isActuallySuccess) {
       isSuccess.value = true
       showSuccess(
-        response.data || 'Şifreniz başarıyla güncellendi',
+        response.data || response.error || 'Şifreniz başarıyla güncellendi',
         'Şifre Güncellendi',
-        [],
         true,
         'Giriş Yap',
         async () => {
@@ -270,7 +294,6 @@ const handleSubmit = async () => {
       showError(
         response.error || 'Şifre güncellenirken hata oluştu',
         'Şifre Güncelleme Hatası',
-        undefined,
         true // Show retry
       )
     }
@@ -278,7 +301,6 @@ const handleSubmit = async () => {
     showError(
       error?.message || 'Beklenmeyen bir hata oluştu',
       'Şifre Güncelleme Hatası',
-      undefined,
       true // Show retry
     )
   } finally {

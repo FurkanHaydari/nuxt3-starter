@@ -63,11 +63,16 @@
         id="birthDate" 
         v-model="form.birthDate"
         :class="{ 'is-invalid': hasFieldError('birthDate') }"
+        :max="maxBirthDate"
+        :min="minBirthDate"
         @input="hasInteracted.birthDate = true; validateField('birthDate')"
         @blur="hasInteracted.birthDate = true; validateField('birthDate')"
         required>
       <div v-if="getFieldError('birthDate')" class="invalid-feedback">
         <i class="bi bi-exclamation-circle me-1"></i>{{ getFieldError('birthDate') }}
+      </div>
+      <div class="form-text">
+        18 yaşından büyük olmanız gerekmektedir.
       </div>
     </div>
     
@@ -115,52 +120,47 @@
       @blur="hasInteracted.professionId = true; validateField('professionId')"
       @selection-changed="onProfessionChange" />
     
-    <div class="mb-3">
-      <label for="password" class="form-label">Şifre <span class="text-danger">*</span></label>
-      <div class="input-group">
-        <input 
-          :type="showPassword ? 'text' : 'password'" 
-          class="form-control" 
-          id="password" 
-          v-model="form.password"
-          :class="{ 'is-invalid': hasFieldError('password') }"
-          @input="hasInteracted.password = true; validateField('password')"
-          @blur="hasInteracted.password = true; validateField('password')"
-          placeholder="En az 8 karakter, büyük/küçük harf, rakam ve özel karakter"
-          required>
-        <button 
-          type="button" 
-          class="btn btn-outline-secondary"
-          @click="showPassword = !showPassword"
-          :disabled="loading">
-          <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-        </button>
-      </div>
-      <div v-if="getFieldError('password')" class="invalid-feedback d-block">{{ getFieldError('password') }}</div>
-    </div>
+    <!-- Password Field -->
+    <FormPasswordField
+      v-model="form.password"
+      field-id="password"
+      label="Şifre"
+      placeholder="En az 8 karakter, büyük/küçük harf, rakam ve özel karakter"
+      :disabled="loading"
+      :error-message="getFieldError('password')"
+      :require-special-char="true"
+      :min-strength-score="3"
+      @input="hasInteracted.password = true; validateField('password')"
+      @blur="hasInteracted.password = true; validateField('password')"
+      @validation-change="onPasswordValidationChange"
+    />
     
-    <div class="mb-3">
-      <label for="confirmPassword" class="form-label">Şifre Tekrar <span class="text-danger">*</span></label>
-      <div class="input-group">
-        <input 
-          :type="showConfirmPassword ? 'text' : 'password'" 
-          class="form-control" 
-          id="confirmPassword" 
-          v-model="form.confirmPassword"
-          :class="{ 'is-invalid': hasFieldError('confirmPassword') }"
-          @input="hasInteracted.confirmPassword = true; validateField('confirmPassword')"
-          @blur="hasInteracted.confirmPassword = true; validateField('confirmPassword')"
-          placeholder="Şifrenizi tekrar girin"
-          required>
-        <button 
-          type="button" 
-          class="btn btn-outline-secondary"
-          @click="showConfirmPassword = !showConfirmPassword"
-          :disabled="loading">
-          <i :class="showConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-        </button>
+    <!-- Confirm Password Field -->
+    <FormPasswordField
+      v-model="form.confirmPassword"
+      field-id="confirmPassword"
+      label="Şifre Tekrar"
+      placeholder="Şifrenizi tekrar girin"
+      :disabled="loading"
+      :error-message="getFieldError('confirmPassword')"
+      :show-strength-indicator="false"
+      :show-requirements="false"
+      :require-special-char="true"
+      :min-strength-score="3"
+      @input="hasInteracted.confirmPassword = true; validateField('confirmPassword')"
+      @blur="hasInteracted.confirmPassword = true; validateField('confirmPassword')"
+    />
+    
+    <!-- Enhanced password match indicator -->
+    <div v-if="form.confirmPassword" class="mt-2 mb-3">
+      <div v-if="form.password === form.confirmPassword" class="d-flex align-items-center">
+        <i class="bi bi-check-circle text-success me-2"></i>
+        <small class="text-success fw-medium">Şifreler eşleşiyor</small>
       </div>
-      <div v-if="getFieldError('confirmPassword')" class="invalid-feedback d-block">{{ getFieldError('confirmPassword') }}</div>
+      <div v-else class="d-flex align-items-center">
+        <i class="bi bi-x-circle text-danger me-2"></i>
+        <small class="text-danger fw-medium">Şifreler eşleşmiyor</small>
+      </div>
     </div>
     
     <!-- Consent Fields -->
@@ -357,9 +357,36 @@ const validationSchema = {
 
 const { hasInteracted, validate, validateField, getFieldError, hasFieldError, validationErrors, markAllAsInteracted } = useFormValidation(props.form, validationSchema, fieldLabels)
 
-// Password visibility
-const showPassword = ref(false)
-const showConfirmPassword = ref(false)
+// Date constraints for birth date (18+ years old)
+const today = new Date()
+const maxBirthDate = computed(() => {
+  const date = new Date(today)
+  date.setFullYear(today.getFullYear() - 18)
+  return date.toISOString().split('T')[0]
+})
+const minBirthDate = computed(() => {
+  const date = new Date(today)
+  date.setFullYear(today.getFullYear() - 100)
+  return date.toISOString().split('T')[0]
+})
+
+// Password validation state from PasswordField component
+const passwordValidation = ref({
+  isValid: false,
+  score: 0,
+  requirements: {},
+  strength: {}
+})
+
+// Password validation change handler from PasswordField
+const onPasswordValidationChange = (data: any) => {
+  passwordValidation.value = data
+  
+  // Also re-validate confirm password if it has been entered
+  if (props.form.confirmPassword) {
+    validateField('confirmPassword')
+  }
+}
 
 const onProfessionChange = (profession: {id: number, name: string} | null) => {
   // Mark as interacted and validate when profession changes
